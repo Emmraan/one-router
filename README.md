@@ -26,7 +26,7 @@ A feature-rich, multi-provider AI chat client that supports OpenAI, Anthropic, G
 
 1. **Clone and install**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/Emmraan/one-router.git
    cd one-router
    pnpm install
    ```
@@ -34,7 +34,7 @@ A feature-rich, multi-provider AI chat client that supports OpenAI, Anthropic, G
 2. **Set up environment**
    Create `.env.local` in the project root:
    ```bash
-   GEMINI_API_KEY=your_gemini_api_key
+   MASTER_KEY_LS_KEY=master-key
    ```
    The Gemini key is used for title generation and prompt enhancement. All other provider keys are configured in-app and encrypted in the browser.
 
