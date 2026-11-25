@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ONE ROUTER — Logo Concept Directions</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f4f4f5;
+      color: #111113;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .page { max-width: 1120px; margin: 0 auto; padding: 56px 24px 80px; }
+    header { margin-bottom: 40px; }
+    .eyebrow {
+      font-size: 12px; font-weight: 600; letter-spacing: .14em;
+      text-transform: uppercase; color: #71717a; margin-bottom: 12px;
+    }
+    h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.05; letter-spacing: -.04em; margin: 0 0 14px; }
+    .lede { max-width: 680px; color: #52525b; font-size: 16px; line-height: 1.65; margin: 0; }
+    .concept {
+      background: #fff; border: 1px solid #e4e4e7; border-radius: 22px;
+      padding: 26px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .concept-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; margin-bottom: 18px; }
+    h2 { font-size: 20px; letter-spacing: -.02em; margin: 0; }
+    .concept-head p { margin: 0; color: #71717a; font-size: 14px; line-height: 1.5; }
+    .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .tile {
+      border-radius: 16px; padding: 22px; min-height: 168px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .tile.light { background: #fff; color: #111113; border: 1px solid #e4e4e7; }
+    .tile.dark { background: #0b0b0c; color: #f4f4f5; border: 1px solid #18181b; }
+    .sizes { display: flex; align-items: flex-end; gap: 26px; flex-wrap: wrap; justify-content: center; }
+    .size { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .size span { font-size: 10px; font-weight: 600; letter-spacing: .08em; opacity: .45; }
+    .mark { display: block; flex: none; }
+    .s16 { width: 16px; height: 16px; }
+    .s24 { width: 24px; height: 24px; }
+    .s32 { width: 32px; height: 32px; }
+    .s48 { width: 48px; height: 48px; }
+    .s96 { width: 96px; height: 96px; }
+    .hero-row { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; margin-top: 14px; }
+    .hero-mark { padding: 24px; border-radius: 18px; display: flex; align-items: center; justify-content: center; }
+    .hero-mark.light { background: #fff; color: #111113; border: 1px solid #e4e4e7; }
+    .hero-mark.dark { background: #0b0b0c; color: #f4f4f5; }
+    .hero-mark .mark { width: 112px; height: 112px; }
+    .notes {
+      margin-top: 8px; padding: 18px 20px; border: 1px dashed #d4d4d8;
+      border-radius: 14px; color: #52525b; font-size: 13px; line-height: 1.6;
+    }
+    .notes strong { color: #111113; }
+    @media (max-width: 760px) {
+      .preview-grid { grid-template-columns: 1fr; }
+      .page { padding: 36px 16px 60px; }
+      .concept { padding: 18px; }
+      .sizes { gap: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="eyebrow">ONE ROUTER · Brand exploration</div>
+      <h1>Symbol directions</h1>
+      <p class="lede">
+        Three monochrome marks built around routing, branching, and network nodes.
+        Each is shown at favicon-to-app-icon sizes on light and dark surfaces.
+        These are concept directions, not final assets.
+      </p>
+    </header>
+
+    <section class="concept">
+      <div class="concept-head">
+        <h2>01 — Node Ring</h2>
+        <p>A continuous ring with three network nodes. A calm, premium “O” that stays legible at favicon size.</p>
+      </div>
+      <div class="preview-grid">
+        <div class="tile light">
+          <div class="sizes">
+            <div class="size"><svg class="mark s16"><use href="#mark-a"/></svg><span>16</span></div>
+            <div class="size"><svg class="mark s24"><use href="#mark-a"/></svg><span>24</span></div>
+            <div class="size"><svg class="mark s32"><use href="#mark-a"/></svg><span>32</span></div>
+            <div class="size"><svg class="mark s48"><use href="#mark-a"/></svg><span>48</span></div>
+            <div class="size"><svg class="mark s96"><use href="#mark-a"/></svg><span>96</span></div>
+          </div>
+        </div>
+        <div class="tile dark">
+          <div class="sizes">
+            <div class="size"><svg class="mark s16"><use href="#mark-a"/></svg><span>16</span></div>
+            <div class="size"><svg class="mark s24"><use href="#mark-a"/></svg><span>24</span></div>
+            <div class="size"><svg class="mark s32"><use href="#mark-a"/></svg><span>32</span></div>
+            <div class="size"><svg class="mark s48"><use href="#mark-a"/></svg><span>48</span></div>
+            <div class="size"><svg class="mark s96"><use href="#mark-a"/></svg><span>96</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-row">
+        <div class="hero-mark light"><svg class="mark"><use href="#mark-a"/></svg></div>
+        <div class="hero-mark dark"><svg class="mark"><use href="#mark-a"/></svg></div>
+      </div>
+    </section>
+
+    <section class="concept">
+      <div class="concept-head">
+        <h2>02 — Route Split</h2>
+        <p>One incoming route splitting into two destinations. The most literal “router” mark.</p>
+      </div>
+      <div class="preview-grid">
+        <div class="tile light">
+          <div class="sizes">
+            <div class="size"><svg class="mark s16"><use href="#mark-b"/></svg><span>16</span></div>
+            <div class="size"><svg class="mark s24"><use href="#mark-b"/></svg><span>24</span></div>
+            <div class="size"><svg class="mark s32"><use href="#mark-b"/></svg><span>32</span></div>
+            <div class="size"><svg class="mark s48"><use href="#mark-b"/></svg><span>48</span></div>
+            <div class="size"><svg class="mark s96"><use href="#mark-b"/></svg><span>96</span></div>
+          </div>
+        </div>
+        <div class="tile dark">
+          <div class="sizes">
+            <div class="size"><svg class="mark s16"><use href="#mark-b"/></svg><span>16</span></div>
+            <div class="size"><svg class="mark s24"><use href="#mark-b"/></svg><span>24</span></div>
+            <div class="size"><svg class="mark s32"><use href="#mark-b"/></svg><span>32</span></div>
+            <div class="size"><svg class="mark s48"><use href="#mark-b"/></svg><span>48</span></div>
+            <div class="size"><svg class="mark s96"><use href="#mark-b"/></svg><span>96</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-row">
+        <div class="hero-mark light"><svg class="mark"><use href="#mark-b"/></svg></div>
+        <div class="hero-mark dark"><svg class="mark"><use href="#mark-b"/></svg></div>
+      </div>
+    </section>
+
+    <section class="concept">
+      <div class="concept-head">
+        <h2>03 — Network O</h2>
+        <p>Three arc segments joined by nodes. A more abstract “O” with a network feel.</p>
+      </div>
+      <div class="preview-grid">
+        <div class="tile light">
+          <div class="sizes">
+            <div class="size"><svg class="mark s16"><use href="#mark-c"/></svg><span>16</span></div>
+            <div class="size"><svg class="mark s24"><use href="#mark-c"/></svg><span>24</span></div>
+            <div class="size"><svg class="mark s32"><use href="#mark-c"/></svg><span>32</span></div>
+            <div class="size"><svg class="mark s48"><use href="#mark-c"/></svg><span>48</span></div>
+            <div class="size"><svg class="mark s96"><use href="#mark-c"/></svg><span>96</span></div>
+          </div>
+        </div>
+        <div class="tile dark">
+          <div class="sizes">
+            <div class="size"><svg class="mark s16"><use href="#mark-c"/></svg><span>16</span></div>
+            <div class="size"><svg class="mark s24"><use href="#mark-c"/></svg><span>24</span></div>
+            <div class="size"><svg class="mark s32"><use href="#mark-c"/></svg><span>32</span></div>
+            <div class="size"><svg class="mark s48"><use href="#mark-c"/></svg><span>48</span></div>
+            <div class="size"><svg class="mark s96"><use href="#mark-c"/></svg><span>96</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-row">
+        <div class="hero-mark light"><svg class="mark"><use href="#mark-c"/></svg></div>
+        <div class="hero-mark dark"><svg class="mark"><use href="#mark-c"/></svg></div>
+      </div>
+    </section>
+
+    <p class="notes">
+      <strong>Next:</strong> pick a direction (or ask for a hybrid), then refine the geometry,
+      build the full lockup, and export favicon / PWA / OG assets. All marks use
+      <code>currentColor</code> so they work on any surface.
+    </p>
+  </div>
+
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="mark-a" viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="19" stroke="currentColor" stroke-width="5"/>
+      <circle cx="32" cy="13" r="5.5" fill="currentColor"/>
+      <circle cx="15.55" cy="41.5" r="5.5" fill="currentColor"/>
+      <circle cx="48.45" cy="41.5" r="5.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="mark-b" viewBox="0 0 64 64" fill="none">
+      <path d="M8 32 H28" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      <path d="M28 32 L48 18" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      <path d="M28 32 L48 46" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="28" cy="32" r="4.5" fill="currentColor"/>
+      <circle cx="52" cy="16" r="5" fill="currentColor"/>
+      <circle cx="52" cy="48" r="5" fill="currentColor"/>
+    </symbol>
+    <symbol id="mark-c" viewBox="0 0 64 64" fill="none">
+      <path d="M19.79 17.45 A19 19 0 0 1 44.21 17.45" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      <path d="M50.71 28.70 A19 19 0 0 1 38.50 49.85" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      <path d="M25.50 49.85 A19 19 0 0 1 13.29 28.70" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="32" cy="13" r="5.5" fill="currentColor"/>
+      <circle cx="48.45" cy="41.5" r="5.5" fill="currentColor"/>
+      <circle cx="15.55" cy="41.5" r="5.5" fill="currentColor"/>
+    </symbol>
+  </svg>
+</body>
+</html>
