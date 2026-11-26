@@ -6,6 +6,7 @@
 | 1 | merged | phase-1-core |
 | 2 | merged | phase-2-db |
 | 3 | merged | phase-3-server |
+| 4 | merged | phase-4-web-cutover |
 
 ## Phase 0 - Workspace, gates, CI
 
@@ -60,4 +61,20 @@
 - Deviation: the standalone server runs from TypeScript through tsx; there is no JS build artifact until packaging. Uploads cap at 10 MiB because the attachment table caps a row.
 - Accepted: DNS rebinding through an owner-supplied public provider host remains core's literal-only policy; repository domain messages are returned to the owner; S3 path-style detection covers localhost and IPv4 only.
 - Dependencies: `hono` and `@hono/node-server` for routing and the Node adapter, `aws4fetch` for SigV4 S3 requests, `tsx` for the standalone start script.
+
+## Phase 4 - Web cutover
+
+- Work commit: aed91ea; local `--no-ff` merge into `main`.
+- Static export: `output: 'export'`, trailing slash, optional base path, unoptimized images; deleted the four `app/api/*` route handlers; `build-smoke.mjs` now validates `out/index.html`, the two auth pages, assets, and a client script.
+- Data: React Query hooks for auth, chats, messages, providers, and settings; `lib/api.ts` wraps the server contract; `lib/sse.ts` decodes `data:` frames; no application data in localStorage (only sidebar and model preferences remain).
+- Auth: login and forced change-password screens; the app layout redirects on a missing session or `mustChangePassword`; 401 and forced-change 403 clear or flip the auth cache from both queries and mutations.
+- Streaming: `POST /api/chat` with `providerId` and model, optimistic assistant bubble, persistence of user and assistant messages, abort keeps the partial reply, errors render and persist a routing bubble.
+- Theme is a server setting with a first-paint cookie; Google fonts removed; `motion` removed from every initial component (the dashboard still lazy-loads it) to fit NFR-15.
+- E2E: Playwright Chromium against the static export and a real Hono server with a fixture provider; covers bootstrap, wrong password, forced change, streamed send, reload, logout, and the post-logout 401.
+- CI: `e2e-local` job builds the export and runs the suite; the scratch workflow was removed before merge.
+- Gate: lint, typecheck, test (551), build, budget (177.8/220 KB JS, 9.4/50 KB CSS), audit gate (0 high or critical; 3 moderate).
+- Pen test fixed: markdown link URLs accepted `javascript:` and could break out of `href`; `safeLinkHref` allows only http, https, and mailto and escapes quotes (16 tests). Mermaid ran with `securityLevel: 'loose'` and injected its SVG; now `strict`.
+- Accepted: KaTeX and Mermaid still load pinned builds from jsdelivr without SRI; P6 localizes them. Static HTML carries frame, base, and form CSP only; the script CSP belongs to the CLI host in P8. The preview static server binds all interfaces, like Hono. Chat search stays client-side over at most 100 chats.
+- Deviation: temp chat, attachment upload, and AI titles move to P5; enhance is wired to the existing endpoint; new chats are titled from the first ten words; the active chat is not restored on reload.
+- Dependencies: `@playwright/test` and `tsx` for browser E2E, `@hono/node-server` to boot the fixture server. Browser E2E cannot be covered by Vitest.
 
