@@ -15,6 +15,7 @@ import { readJson } from '../middleware/body';
 import type { createAuth } from '../middleware/auth';
 import { resolveProvider } from '../providers/resolve';
 import type { AppEnv } from '../types';
+import { extractPdfText } from '../files/pdf';
 import { redactEventStream } from './redact-stream';
 
 const bodySchema = z.object({
@@ -45,6 +46,7 @@ async function hydrateAttachments(
     }
     if (message.attachments.length > 10) throw new HttpError(400, 'At most 10 files are allowed per message', 'TOO_MANY_FILES');
     const attachments: NonNullable<Message['attachments']> = [];
+    let content = message.content;
     const seen = new Set<string>();
     for (const attachment of message.attachments) {
       if (seen.has(attachment.id)) throw new HttpError(400, 'Duplicate attachment', 'INVALID_REQUEST');
@@ -56,7 +58,13 @@ async function hydrateAttachments(
       if (count > maxAttachmentCount || total > maxAttachmentBytes) {
         throw new HttpError(400, 'Attachments exceed the chat limit', 'TOTAL_TOO_LARGE');
       }
-      attachments.push({
+      if (result.file.mimeType.startsWith('text/') || result.file.mimeType === 'application/json' || result.file.mimeType === 'application/pdf') {
+        const text = result.file.mimeType === 'application/pdf'
+          ? await extractPdfText(result.bytes)
+          : result.bytes.toString('utf8');
+        if (content.length + text.length > 200000) throw new HttpError(400, 'Attachment text exceeds the context limit', 'TOTAL_TOO_LARGE');
+        content += `\n\n[File: ${result.file.name}]\n${text}\n[End file]`;
+      } else attachments.push({
         id: result.file.id,
         name: result.file.name,
         type: result.file.mimeType,
@@ -65,7 +73,7 @@ async function hydrateAttachments(
         base64: result.bytes.toString('base64'),
       });
     }
-    hydrated.push({ ...message, attachments });
+    hydrated.push({ ...message, content, attachments });
   }
   return hydrated;
 }

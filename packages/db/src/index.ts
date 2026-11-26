@@ -6,5 +6,5 @@ export { hashPassword, verifyPassword } from './crypto/password';
 export { encryptBytes, decryptBytes, encryptText, decryptText } from './crypto/encryption';
 export { createRepositories } from './repositories/repositories';
 export { searchChats } from './search';
-export { exportArchive, exportPlaintext, importArchive, previewArchive } from './archive/transfer';
+export { exportArchive, exportPlaintext, importArchive, importLegacyData, previewArchive } from './archive/transfer';
 export type { ArchiveData, ArchiveManifest } from './archive/schema';

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { deleteMessage as deleteMessageRequest, updateMessage as updateMessageRequest } from '../lib/api';
+import { deleteFile, deleteMessage as deleteMessageRequest, updateMessage as updateMessageRequest } from '../lib/api';
 import { queryKeys } from '../lib/query';
 import type { MessageDto } from '../lib/api-types';
 import type { Message } from '../lib/provider-types';
@@ -27,6 +27,8 @@ export function useChatEditing({ activeChatId, messages, sendMessage }: UseChatE
   const queryClient = useQueryClient();
   const [editingMessageId, setEditingMessageId] = React.useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = React.useState('');
+  const [editError, setEditError] = React.useState('');
+  const temporary = Boolean(activeChatId?.startsWith('temporary-'));
 
   const handleEditMessage = (id: string, content: string) => {
     setEditingMessageId(id);
@@ -53,22 +55,29 @@ export function useChatEditing({ activeChatId, messages, sendMessage }: UseChatE
     );
     cancelEditMessage();
     try {
-      await updateMessageRequest(message.id, content);
-    } catch {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.messages(chatId) });
+      if (!temporary) await updateMessageRequest(message.id, content);
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : 'The message could not be edited.');
+      if (!temporary) void queryClient.invalidateQueries({ queryKey: queryKeys.messages(chatId) });
     }
   };
 
   const deleteMessage = async (id: string) => {
     if (!activeChatId) return;
     const chatId = activeChatId;
+    const message = messages.find((item) => item.id === id);
     queryClient.setQueryData<MessageDto[]>(queryKeys.messages(chatId), (old) =>
       (old ?? []).filter((m) => m.id !== id),
     );
     try {
-      await deleteMessageRequest(id);
-    } catch {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.messages(chatId) });
+      if (temporary) {
+        await Promise.all((message?.attachments ?? []).map((attachment) => deleteFile(attachment.id, true).catch(() => undefined)));
+      } else {
+        await deleteMessageRequest(id);
+      }
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : 'The message could not be deleted.');
+      if (!temporary) void queryClient.invalidateQueries({ queryKey: queryKeys.messages(chatId) });
     }
   };
 
@@ -80,6 +89,8 @@ export function useChatEditing({ activeChatId, messages, sendMessage }: UseChatE
     saveEditedMessage,
     cancelEditMessage,
     deleteMessage,
+    editError,
+    clearEditError: () => setEditError(''),
     exportMessageToMarkdown,
   };
 }

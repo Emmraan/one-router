@@ -55,7 +55,7 @@ export function createApp(options: AppOptions) {
 
   const api = new Hono<AppEnv>();
   api.use('*', auth.requireAuth());
-  api.route('/chats', chatDataRoutes({ auth, fileStore }));
+  api.route('/chats', chatDataRoutes({ db: options.db, auth, fileStore }));
   api.route('/', messageRoutes({ auth, fileStore }));
   api.route('/providers', providerRoutes({ auth }));
   api.route('/settings', settingRoutes({ auth }));

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { exportArchive, exportPlaintext, importArchive, previewArchive, type Database } from '@one-router/db';
+import { exportArchive, exportPlaintext, importArchive, importLegacyData, previewArchive, type Database } from '@one-router/db';
 import { z } from 'zod';
 import { HttpError } from '../errors';
 import type { createFileStore } from '../files/storage';
@@ -14,6 +14,7 @@ const exportSchema = z.object({
   plaintext: z.boolean().optional(),
 }).strict();
 const modeSchema = z.enum(['merge', 'replace']);
+const legacySchema = z.object({ data: z.unknown() }).strict();
 
 function importFailure(error: unknown): never {
   if (error instanceof Error && /archive/i.test(error.message)) {
@@ -106,6 +107,16 @@ export function dataRoutes(deps: {
       return c.json({ manifest: result.manifest, imported: result.manifest.counts });
     } catch (error) {
       return importFailure(error);
+    }
+  });
+
+  app.post('/legacy', async (c) => {
+    const body = await readJson(c, legacySchema, MAX_ARCHIVE_BYTES);
+    try {
+      const result = await importLegacyData(deps.db, c.get('ownerId'), body.data);
+      return c.json({ imported: result.counts });
+    } catch {
+      throw new HttpError(400, 'Unable to import local data', 'INVALID_LEGACY_DATA');
     }
   });
 

@@ -39,6 +39,7 @@ export interface MessageDto {
   isRegenerated: boolean;
   createdAt: number;
   updatedAt: number;
+  attachments?: import('./provider-types').Attachment[];
 }
 
 export interface ProviderDto {

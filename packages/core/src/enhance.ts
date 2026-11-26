@@ -2,9 +2,6 @@ import { CoreError } from './errors';
 import { generateGeminiText } from './providers/gemini';
 import type { FetchLike } from './types';
 
-export const ENHANCE_SUFFIX =
-  '\n\n[Please clarify, provide step-by-step reasoning, and format with markdown formatting.]';
-
 export interface EnhancePromptOptions {
   prompt: string;
   apiKey?: string;
@@ -21,20 +18,23 @@ export async function enhancePrompt(
   }
 
   if (!options.apiKey) {
-    return `${prompt}${ENHANCE_SUFFIX}`;
+    throw new CoreError(
+      'PROVIDER_REQUIRED',
+      'Select a provider and model before enhancing',
+    );
   }
 
-  try {
-    const text = await generateGeminiText({
-      apiKey: options.apiKey,
-      fetch: options.fetch,
-      signal: options.signal,
-      prompt: `You are an expert prompt engineer. Enhance the following user prompt to make it clear, detailed, structured, and optimized to produce the highest quality response from an AI assistant. Retain all original intent and key constraints. Keep it relatively concise but highly optimized. Output only the final rewritten prompt itself, with no intro or outro comments.
+  const text = await generateGeminiText({
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    signal: options.signal,
+    prompt: `You are an expert prompt engineer. Enhance the following user prompt to make it clear, detailed, structured, and optimized to produce the highest quality response from an AI assistant. Retain all original intent and key constraints. Keep it relatively concise but highly optimized. Output only the final rewritten prompt itself, with no intro or outro comments.
 
 User Prompt: "${prompt}"`,
-    });
-    return text.trim() || prompt;
-  } catch {
-    return prompt;
+  });
+  const enhanced = text.trim();
+  if (!enhanced) {
+    throw new CoreError('UPSTREAM_ERROR', 'The provider returned no prompt');
   }
+  return enhanced;
 }

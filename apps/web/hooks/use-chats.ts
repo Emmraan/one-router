@@ -5,6 +5,7 @@ import {
   createChat,
   deleteChat,
   listChats,
+  restoreChat,
   updateChat,
   type CreateChatInput,
   type UpdateChatInput,
@@ -20,6 +21,23 @@ export function useChats() {
   return useQuery({
     queryKey: queryKeys.chats,
     queryFn: () => listChats().then((page) => page.items),
+  });
+}
+
+export function useChatSearch(query: string) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: [...queryKeys.chats, 'search', trimmed],
+    queryFn: () => listChats(false, trimmed).then((page) => page.items),
+    enabled: trimmed.length > 0,
+  });
+}
+
+export function useTrashChats(enabled = true) {
+  return useQuery({
+    queryKey: [...queryKeys.chats, 'trash'],
+    queryFn: () => listChats(true).then((page) => page.items),
+    enabled,
   });
 }
 
@@ -80,6 +98,26 @@ export function useDeleteChat() {
     onError: (_error, _id, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.chats, context.previous);
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chats });
+    },
+  });
+}
+
+export function useRestoreChat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => restoreChat(id),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chats });
+    },
+  });
+}
+
+export function usePermanentDeleteChat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteChat(id, true),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.chats });
     },

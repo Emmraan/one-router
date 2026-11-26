@@ -115,9 +115,11 @@ export function changePasswordRequest(input: ChangePasswordInput): Promise<{ ok:
 
 // ---- Chats ----
 
-export function listChats(trash = false): Promise<Page<ChatDto>> {
-  const query = trash ? '?trash=true&limit=100' : '?limit=100';
-  return apiJson<Page<ChatDto>>(`/api/chats${query}`);
+export function listChats(trash = false, query = '', cursor?: string): Promise<Page<ChatDto>> {
+  const params = new URLSearchParams({ limit: '100', trash: String(trash) });
+  if (query.trim()) params.set('q', query.trim());
+  if (cursor) params.set('cursor', cursor);
+  return apiJson<Page<ChatDto>>(`/api/chats?${params}`);
 }
 
 export interface CreateChatInput {
@@ -171,10 +173,10 @@ export async function listAllMessages(chatId: string): Promise<MessageDto[]> {
   for (let page = 0; page < MAX_MESSAGE_PAGES; page += 1) {
     const result = await listMessages(chatId, cursor);
     items.push(...result.items);
-    if (!result.nextCursor) break;
+    if (!result.nextCursor) return items;
     cursor = result.nextCursor;
   }
-  return items;
+  throw new Error('This chat is too large to load in full.');
 }
 
 export interface CreateMessageInput {
@@ -253,6 +255,76 @@ export function discoverModels(input: DiscoveryInput): Promise<DiscoveryResult> 
   return apiJson<DiscoveryResult>('/api/discovery', { method: 'POST', json: input });
 }
 
-export function enhancePrompt(prompt: string): Promise<{ enhanced: string }> {
-  return apiJson('/api/enhance', { method: 'POST', json: { prompt } });
+export function enhancePrompt(prompt: string, providerId?: string, model?: string, signal?: AbortSignal): Promise<{ enhanced: string }> {
+  return apiJson('/api/enhance', { method: 'POST', json: { prompt, providerId, model }, signal });
+}
+
+export function saveConversation(input: CreateChatInput & { messages: CreateMessageInput[] }): Promise<{ chat: ChatDto }> {
+  return apiJson('/api/chats/save', { method: 'POST', json: input });
+}
+
+export function deleteFile(id: string, keepalive = false): Promise<{ ok: boolean }> {
+  return apiJson(`/api/files/${encodeURIComponent(id)}`, { method: 'DELETE', keepalive });
+}
+
+export function generateTitle(message: string, providerId: string, model: string): Promise<{ title: string }> {
+  return apiJson('/api/title', { method: 'POST', json: { message: message.slice(0, 100000), providerId, model } });
+}
+
+// ---- Data portability ----
+
+export interface ArchiveCounts {
+  providers: number;
+  chats: number;
+  messages: number;
+  attachments: number;
+  settings: number;
+}
+
+export interface ArchiveManifest {
+  format: 'onerouter';
+  version: 1;
+  createdAt: number;
+  checksum: string;
+  counts: ArchiveCounts;
+}
+
+export async function exportData(input: { passphrase?: string; plaintext?: boolean }): Promise<{ blob: Blob; filename: string }> {
+  const response = await request('/api/data/export', { method: 'POST', json: input });
+  if (!response.ok) {
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    throw toApiError(response.status, body);
+  }
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match?.[1] ?? (input.plaintext || !input.passphrase ? 'one-router.json' : 'one-router.onerouter');
+  return { blob: await response.blob(), filename };
+}
+
+export function previewImport(file: File, passphrase?: string): Promise<{ manifest: ArchiveManifest }> {
+  const form = new FormData();
+  form.set('file', file);
+  if (passphrase) form.set('passphrase', passphrase);
+  return apiJson('/api/data/preview', { method: 'POST', body: form });
+}
+
+export function importData(
+  file: File,
+  mode: 'merge' | 'replace',
+  passphrase?: string,
+): Promise<{ manifest: ArchiveManifest; imported: ArchiveCounts }> {
+  const form = new FormData();
+  form.set('file', file);
+  form.set('mode', mode);
+  if (passphrase) form.set('passphrase', passphrase);
+  return apiJson('/api/data/import', { method: 'POST', body: form });
+}
+
+export function importLegacy(data: unknown): Promise<{ imported: ArchiveCounts }> {
+  return apiJson('/api/data/legacy', { method: 'POST', json: { data } });
 }

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { searchChats, type Database } from '@one-router/db';
 import type { createFileStore } from '../files/storage';
 import { HttpError } from '../errors';
 import { readJson } from '../middleware/body';
@@ -30,21 +31,36 @@ function queryLimit(value: string | undefined): number | undefined {
   return parsed;
 }
 
-export function chatRoutes(deps: { auth: ReturnType<typeof createAuth>; fileStore: ReturnType<typeof createFileStore> }) {
+export function chatRoutes(deps: { db: Database; auth: ReturnType<typeof createAuth>; fileStore: ReturnType<typeof createFileStore> }) {
   const app = new Hono<AppEnv>();
   const repos = deps.auth.repos;
 
   app.get('/', async (c) => {
     const owner = c.get('ownerId');
     try {
-      return c.json(await repos.chats.list(owner, {
+      const options = {
         limit: queryLimit(c.req.query('limit')),
         cursor: c.req.query('cursor'),
         trash: c.req.query('trash') === 'true',
-      }));
+      };
+      const query = c.req.query('q')?.trim();
+      return c.json(query ? await searchChats(deps.db, owner, query, { ...options, signal: c.req.raw.signal }) : await repos.chats.list(owner, options));
     } catch (error) {
       return repositoryFailure(error);
     }
+  });
+
+  app.post('/save', async (c) => {
+    const message = z.object({
+      role: z.enum(['user', 'assistant', 'system']), content: z.string().max(100000),
+      model: z.string().min(1).max(500).optional(), createdAt: z.number().int().nonnegative().optional(),
+      isRegenerated: z.boolean().optional(), attachmentIds: z.array(z.string().min(1).max(200)).max(10).optional(),
+    }).strict();
+    const body = await readJson(c, createSchema.extend({ messages: z.array(message).min(1).max(200) }), 4 * 1024 * 1024);
+    try {
+      const { messages, ...chat } = body;
+      return c.json({ chat: await repos.saveConversation(c.get('ownerId'), { ...chat, title: chat.title ?? 'New Chat' }, messages) }, 201);
+    } catch (error) { return repositoryFailure(error); }
   });
 
   app.post('/', async (c) => {

@@ -8,6 +8,8 @@ import { serve } from '@hono/node-server';
 import type { FetchLike } from '@one-router/core';
 import { bootstrapDatabase, createApp, loadEnv } from '@one-router/server';
 
+type Database = Awaited<ReturnType<typeof bootstrapDatabase>>['db'];
+
 const E2E_PORT = 4000;
 const E2E_ORIGIN = 'http://localhost:3100';
 
@@ -37,6 +39,20 @@ const fixtureFetch: FetchLike = async (input) => {
   return new Response('fixture: unknown request', { status: 404 });
 };
 
+// Only the E2E server knows this route; it reads the real SQLite file so a test
+// can prove that a temporary chat never reached the database.
+async function databaseStats(db: Database) {
+  const result = await db.client.execute(
+    'select (select count(*) from chats) as chats, (select count(*) from messages) as messages, (select count(*) from attachments) as attachments',
+  );
+  const row = result.rows[0] ?? {};
+  return {
+    chats: Number(row.chats ?? 0),
+    messages: Number(row.messages ?? 0),
+    attachments: Number(row.attachments ?? 0),
+  };
+}
+
 async function main() {
   const dataDir = mkdtempSync(join(tmpdir(), 'one-router-e2e-'));
   const env = loadEnv({
@@ -48,9 +64,20 @@ async function main() {
   });
   const { db } = await bootstrapDatabase(env);
   const app = createApp({ db, env, fetch: fixtureFetch });
-  serve({ fetch: app.fetch, port: E2E_PORT }, (info) => {
-    console.log(`E2E API on http://localhost:${info.port} (data ${dataDir})`);
-  });
+  serve(
+    {
+      port: E2E_PORT,
+      fetch: async (request, ...rest) => {
+        if (new URL(request.url).pathname === '/health/__e2e/stats') {
+          return Response.json(await databaseStats(db));
+        }
+        return app.fetch(request, ...rest);
+      },
+    },
+    (info) => {
+      console.log(`E2E API on http://localhost:${info.port} (data ${dataDir})`);
+    },
+  );
 }
 
 main().catch((error: unknown) => {
