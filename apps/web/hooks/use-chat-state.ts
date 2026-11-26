@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect -- localStorage hydration runs once on mount; P4 replaces this hook with server data. */
+
 import * as React from 'react';
 import type { Chat, Provider } from '../lib/provider-types';
 

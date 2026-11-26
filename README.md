@@ -1,114 +1,62 @@
-# ONE ROUTER — Multi-Provider AI Chat
+# ONE ROUTER
 
-A feature-rich, multi-provider AI chat client that supports OpenAI, Anthropic, Gemini, and Ollama — all in a single interface.
+A multi-provider AI chat client. The current app supports OpenAI, Anthropic, Gemini, and Ollama through one interface.
 
-## Features
+This repository is moving from a single Next.js app to a pnpm monorepo. Phase 0 moved the app to `apps/web` and added the shared gates. Later phases add the core, database, server, CLI, and landing site.
 
-- **Multi-Provider**: Add and switch between OpenAI, Anthropic, Gemini, and Ollama providers
-- **Streaming Responses**: Real-time SSE streaming from all providers
-- **Markdown Rendering**: Rich markdown with syntax-highlighted code blocks, KaTeX math, and Mermaid diagrams
-- **Chat History**: Persistent chat history with search and pinning (localStorage)
-- **Inline Editing**: Edit, delete, and regenerate messages
-- **Prompt Enhancement**: Use Gemini 2.0 Flash to enhance prompts before sending
-- **File Attachments**: Drag-and-drop file upload support
-- **Export**: Export assistant responses as markdown files
-- **Quote & Ask**: Select text to quote, copy, or ask follow-up questions
-- **Temporary Mode**: Chat without saving to history
-- **Dark/Light Theme**: Toggle between dark and light modes
-- **Virtualized List**: Smooth scrolling with `@tanstack/react-virtual` for large conversations
+## Requirements
 
-## Prerequisites
+- Node.js 24 or newer
+- pnpm 10.33.2
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [pnpm](https://pnpm.io/) (v10+)
+## Development
 
-## Getting Started
+```bash
+pnpm install
+pnpm dev
+```
 
-1. **Clone and install**
-   ```bash
-   git clone https://github.com/Emmraan/one-router.git
-   cd one-router
-   pnpm install
-   ```
-
-2. **Set up environment**
-   Create `.env.local` in the project root:
-   ```bash
-   MASTER_KEY_LS_KEY=master-key
-   ```
-   The Gemini key is used for title generation and prompt enhancement. All other provider keys are configured in-app and encrypted in the browser.
-
-3. **Run the development server**
-   ```bash
-   pnpm dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start the dev server |
-| `pnpm build` | Production build (includes typecheck) |
+| Command | Purpose |
+|---|---|
+| `pnpm dev` | Start the web app |
+| `pnpm build` | Production build and build smoke check |
+| `pnpm start` | Start the production server |
 | `pnpm lint` | Run ESLint |
-| `pnpm clean` | Remove `.next` cache |
+| `pnpm typecheck` | Typecheck the app and root scripts |
+| `pnpm test` | Run the unit tests |
+| `pnpm budget` | Check the NFR-15 JS and CSS budgets |
+| `pnpm audit:gate` | Fail on high or critical dependency advisories |
+| `pnpm lint:changed` | Lint only the changed targets |
+| `pnpm typecheck:changed` | Typecheck only the changed targets |
+| `pnpm test:changed` | Test only the changed targets |
+| `pnpm clean` | Remove build and Turbo caches |
 
-## Architecture
+The full phase gate is:
 
-- **Next.js 15** App Router (React 19)
-- **Tailwind CSS v4** — CSS-native configuration via `@theme` directives
-- **State**: Persisted in `localStorage` (chats, providers, API keys, master key)
-- **API Keys**: Encrypted client-side with AES-GCM (`lib/crypto.ts`)
-- **API Routes**:
-  - `/api/chat` — Normalized streaming from all providers via SSE
-  - `/api/title` — Auto-generate chat titles (Gemini 2.0 Flash or heuristic)
-  - `/api/enhance` — Prompt enhancement (Gemini 2.0 Flash or heuristic)
-- **500-Line Limit**: No source file exceeds 500 lines.
-- **Query Client**: `@tanstack/react-query` with 5-minute staleTime, no refetch on focus.
-
-## Project Structure
-
-```
-├── app/
-│   ├── api/chat/       # Chat streaming endpoint
-│   ├── api/enhance/    # Prompt enhancement endpoint
-│   ├── api/title/      # Title generation endpoint
-│   ├── globals.css     # Tailwind v4 theme and global styles
-│   ├── layout.tsx      # Root layout
-│   ├── page.tsx        # Main chat page (orchestrator, <300 lines)
-│   └── providers.tsx   # React Query provider setup
-├── components/
-│   ├── chat-message-item.tsx       # Message balloon component
-│   ├── drag-overlay.tsx            # Drag-and-drop overlay
-│   ├── floating-selection-toolbar.tsx # Text selection toolbar
-│   ├── greeting-view.tsx           # Empty-state greeting
-│   ├── header-bar.tsx              # Top navigation bar
-│   ├── input-deck.tsx              # Input area with attachments
-│   ├── markdown-code-block.tsx     # Code block with syntax highlight
-│   ├── markdown-math.tsx           # KaTeX and Mermaid renderers
-│   ├── markdown-renderer.tsx       # Rich markdown parser
-│   ├── model-selector.tsx          # Searchable model picker
-│   ├── provider-dashboard.tsx      # Provider CRUD panel (orchestrator)
-│   ├── provider-dashboard/
-│   │   ├── provider-form.tsx       # Add/edit provider form
-│   │   └── provider-list.tsx       # Provider list with presets
-│   ├── sidebar.tsx                 # Expandable chat list
-│   └── sidebar-chat-item.tsx       # Single chat list item
-├── hooks/
-│   ├── use-chat-editing.ts   # Inline editing, deletion, export
-│   ├── use-chat-state.ts     # Chat/provider state and CRUD
-│   ├── use-enhance.ts        # Prompt enhancement flow
-│   ├── use-file-upload.ts    # File processing and drag-n-drop
-│   ├── use-katex.ts          # Dynamic KaTeX loader
-│   ├── use-mermaid.ts        # Dynamic Mermaid loader
-│   ├── use-streaming.ts      # SSE streaming pipeline
-│   └── use-text-selection.ts # Text selection tracking
-└── lib/
-    ├── crypto.ts             # AES-GCM encryption
-    ├── provider-types.ts     # TypeScript interfaces and defaults
-    └── utils.ts              # cn() utility (clsx + tailwind-merge)
+```bash
+pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm budget && pnpm audit:gate
 ```
 
-## License
+## Layout
 
-MIT — see [LICENSE](./LICENSE).
+```text
+apps/web/      Next.js chat app
+scripts/       changed-target, budget, audit, build smoke, and CI helpers
+context/       PRD, plan, and progress
+.github/       CI workflows
+```
+
+## Current state
+
+The app still stores providers, API keys, chats, and the master key in `localStorage`, and encrypts API keys in the browser with AES-GCM. Phase 4 moves application data to the server. The Next config keeps `output: 'standalone'` until the static export lands in Phase 4.
+
+## Links
+
+- [Agent guide](./AGENTS.md)
+- [Plan](./context/PLAN.md)
+- [Progress](./context/PROGRESS.md)
+- [License](./LICENSE)

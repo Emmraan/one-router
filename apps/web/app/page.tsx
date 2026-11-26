@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import dynamic from 'next/dynamic';
 import { RefreshCw, Image as ImageIcon, FileText } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Sidebar } from '../components/sidebar';
-import { ProviderDashboard } from '../components/provider-dashboard';
 import { ChatMessageItem } from '../components/chat-message-item';
 import { HeaderBar } from '../components/header-bar';
 import { InputDeck } from '../components/input-deck';
@@ -17,6 +17,16 @@ import { useStreaming } from '../hooks/use-streaming';
 import { useEnhance } from '../hooks/use-enhance';
 import { useChatEditing } from '../hooks/use-chat-editing';
 import { useTextSelection } from '../hooks/use-text-selection';
+
+// The dashboard is opened from the sidebar; keeping it out of the initial route
+// leaves room for the NFR-15 JS budget.
+const ProviderDashboard = dynamic(
+  () =>
+    import('../components/provider-dashboard').then(
+      (module) => module.ProviderDashboard,
+    ),
+  { ssr: false },
+);
 
 function getFileIcon(fileName: string, mimeType: string) {
   const ext = fileName.split('.').pop()?.toLowerCase();
