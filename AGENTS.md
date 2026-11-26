@@ -2,11 +2,13 @@
 
 This file is the operating contract for agents working in this repo. It applies to
 every phase, feature, fix, review, and release. `context/PRD.md` is the product
-spec; this file defines how work is executed.
+spec template and post-MVP backlog; the locked v0.7 text is on
+`docs/prd-one-router`. This file defines how work is executed.
 
-Current state: a single Next.js app, PRD v0.5, no `context/PLAN.md`, no test
-framework. Target state: a pnpm monorepo with `apps/web`, `apps/site`, and
-`packages/core`, `packages/db`, `packages/server`, `packages/ui`, `packages/cli`.
+Current state: a single Next.js app, PRD v0.7 locked on `docs/prd-one-router`,
+active `context/PLAN.md`, no test framework. Target state: a pnpm monorepo with
+`apps/web`, `apps/site`, and `packages/core`, `packages/db`, `packages/server`,
+`packages/ui`, `packages/cli`.
 
 ## Operating rules
 
@@ -70,7 +72,9 @@ second rulebook.
 
 ### Doc lifecycle
 
-`context/PRD.md` is the working spec.
+`context/PRD.md` is the working spec. The locked v0.7 text is archived on
+`docs/prd-one-router`; the current file keeps the post-MVP backlog and the MVP
+heading template.
 
 - Once `context/PLAN.md` covers everything the PRD describes, rewrite the PRD in
   place to its clean template: the same headings with no content. The next round is
@@ -79,8 +83,9 @@ second rulebook.
 - Once every phase in `PLAN.md` is merged, rewrite `PLAN.md` and `PROGRESS.md` the
   same way: same headings, fields emptied.
 - There is no template file. Rewrite in place; do not copy from another file.
-- Current state: PRD v0.5 is the source for the v1 plan. `PLAN.md` and
-  `PROGRESS.md` do not exist. Do not create `PLAN.md` until the owner asks.
+- Current state: PRD v0.7 is locked and archived on `docs/prd-one-router`;
+  `context/PLAN.md` is the active MVP plan. `PROGRESS.md` does not exist yet;
+  Phase 0 creates it.
 
 ## Testing
 
