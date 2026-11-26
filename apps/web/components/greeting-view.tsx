@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'motion/react';
 import { ArrowDownRight } from 'lucide-react';
 
 interface GreetingViewProps {
@@ -32,13 +31,9 @@ export function GreetingView({ renderInputDeck, onPresetPrompt }: GreetingViewPr
           </p>
         </div>
 
-        <motion.div
-          layoutId="input-card"
-          transition={{ type: "spring", stiffness: 220, damping: 26 }}
-          className="w-full max-w-2xl z-20"
-        >
+        <div className="w-full max-w-2xl z-20">
           {renderInputDeck()}
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full mt-4">
           {PRESETS.map((p, idx) => (

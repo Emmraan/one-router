@@ -3,9 +3,9 @@
 import * as React from 'react';
 import { X, Database, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Provider, ProviderType, PROVIDER_DEFAULTS } from '../lib/provider-types';
-import { encryptText, decryptText } from '../lib/crypto';
+import { discoverModels as discoverRequest } from '../lib/api';
+import { useCreateProvider, useDeleteProvider, useUpdateProvider } from '../hooks/use-providers';
 import { ConfirmModal } from './confirm-modal';
 import { ProviderForm } from './provider-dashboard/provider-form';
 import { ProviderList } from './provider-dashboard/provider-list';
@@ -14,11 +14,13 @@ interface ProviderDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   providers: Provider[];
-  onUpdateProviders: (newProviders: Provider[]) => void;
 }
 
-export function ProviderDashboard({ isOpen, onClose, providers, onUpdateProviders }: ProviderDashboardProps) {
-  const queryClient = useQueryClient();
+export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashboardProps) {
+  const createProvider = useCreateProvider();
+  const updateProvider = useUpdateProvider();
+  const deleteProvider = useDeleteProvider();
+
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [showKeyRaw, setShowKeyRaw] = React.useState<Record<string, boolean>>({});
   const [discoveringId, setDiscoveringId] = React.useState<string | null>(null);
@@ -35,24 +37,16 @@ export function ProviderDashboard({ isOpen, onClose, providers, onUpdateProvider
   const [isTestingConnection, setIsTestingConnection] = React.useState(false);
   const [testResult, setTestResult] = React.useState<{ success: boolean; message: string; count?: number } | null>(null);
 
-  const handleEdit = async (provider: Provider) => {
+  // The server never returns stored keys or headers, so the edit form starts
+  // blank and an omitted field means "keep the current value".
+  const handleEdit = (provider: Provider) => {
     setEditingId(provider.id);
     setFormName(provider.name);
     setFormType(provider.type);
     setFormBaseUrl(provider.baseUrl);
     setFormModels(provider.models);
-    setFormHeaders(provider.customHeaders || '');
-    if (provider.apiKey) {
-      try {
-        const decrypted = await decryptText(provider.apiKey);
-        setFormApiKey(decrypted);
-      } catch (e) {
-        console.error('Failed to decrypt api key:', e);
-        setFormApiKey('');
-      }
-    } else {
-      setFormApiKey('');
-    }
+    setFormApiKey('');
+    setFormHeaders('');
     setValidationError('');
     setTestResult(null);
   };
@@ -76,89 +70,126 @@ export function ProviderDashboard({ isOpen, onClose, providers, onUpdateProvider
     setTestResult(null);
     setValidationError('');
     try {
-      const res = await fetch('/api/discovery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseUrl: formBaseUrl.trim(), apiKey: formApiKey.trim(), providerType: formType }),
+      const data = await discoverRequest({
+        baseUrl: formBaseUrl.trim(),
+        apiKey: formApiKey.trim() || undefined,
+        providerType: formType,
       });
-      const data = await res.json();
-      if (data.success && data.models && Array.isArray(data.models)) {
+      if (data.success && Array.isArray(data.models)) {
         setFormModels(data.models);
-        setTestResult({ success: true, message: `Connected successfully! Discovered ${data.models.length} compatible model(s) and populated list below.`, count: data.models.length });
+        setTestResult({
+          success: true,
+          message: `Connected successfully. Discovered ${data.models.length} compatible model(s) and populated the list below.`,
+          count: data.models.length,
+        });
       } else {
         setTestResult({ success: false, message: data.error || 'Connection refused or model list unsupported by this endpoint.' });
       }
-    } catch (e: any) {
-      setTestResult({ success: false, message: e.message || 'Error occurred during connection/ping test.' });
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Error occurred during connection test.',
+      });
     } finally {
       setIsTestingConnection(false);
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!formName.trim()) { setValidationError('Name is required'); return; }
     if (!formBaseUrl.trim()) { setValidationError('Base URL is required'); return; }
+    setValidationError('');
 
-    const encryptedKey = formApiKey.trim() ? await encryptText(formApiKey.trim()) : '';
-    const modelsArray = formModels.filter(Boolean);
-    let updatedList: Provider[];
+    const models = formModels.filter(Boolean);
+    const chosenModels = models.length > 0 ? models : PROVIDER_DEFAULTS[formType].models;
+    const key = formApiKey.trim();
+    const headers = formHeaders.trim() || undefined;
 
-    if (editingId && editingId !== 'new') {
-      updatedList = providers.map((prov) =>
-        prov.id === editingId
-          ? { ...prov, name: formName.trim(), type: formType, baseUrl: formBaseUrl.trim(), apiKey: encryptedKey, models: modelsArray.length > 0 ? modelsArray : PROVIDER_DEFAULTS[formType].models, customHeaders: formHeaders.trim() }
-          : prov
-      );
-    } else {
-      updatedList = [...providers, {
-        id: Math.random().toString(36).substring(7),
-        name: formName.trim(),
-        type: formType,
-        baseUrl: formBaseUrl.trim(),
-        apiKey: encryptedKey,
-        models: modelsArray.length > 0 ? modelsArray : PROVIDER_DEFAULTS[formType].models,
-        customHeaders: formHeaders.trim(),
-        isActive: providers.length === 0,
-      }];
+    try {
+      if (editingId && editingId !== 'new') {
+        await updateProvider.mutateAsync({
+          id: editingId,
+          patch: {
+            name: formName.trim(),
+            type: formType,
+            baseUrl: formBaseUrl.trim(),
+            models: chosenModels,
+            customHeaders: headers,
+            ...(key ? { apiKey: key } : {}),
+          },
+        });
+      } else {
+        await createProvider.mutateAsync({
+          id: crypto.randomUUID(),
+          name: formName.trim(),
+          type: formType,
+          baseUrl: formBaseUrl.trim(),
+          apiKey: key || undefined,
+          models: chosenModels,
+          customHeaders: headers,
+          isActive: providers.length === 0,
+        });
+      }
+      handleCloseForm();
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : 'Unable to save the provider.');
     }
-    onUpdateProviders(updatedList);
-    handleCloseForm();
   };
 
-  const executeDelete = (id: string) => {
-    const filtered = providers.filter((p) => p.id !== id);
-    if (filtered.length > 0 && !filtered.some((p) => p.isActive)) filtered[0].isActive = true;
-    onUpdateProviders(filtered);
+  const executeDelete = async (id: string) => {
+    try {
+      await deleteProvider.mutateAsync(id);
+    } catch {
+      // The list refreshes from the server on the next read.
+    }
     if (editingId === id) handleCloseForm();
   };
 
-  const discoverModels = async (prov: Provider) => {
-    setDiscoveringId(prov.id);
+  const handleDiscover = async (provider: Provider) => {
+    setDiscoveringId(provider.id);
     setDiscoveryError(null);
     try {
-      const models = await queryClient.fetchQuery({
-        queryKey: ['provider-models', prov.id, prov.baseUrl],
-        queryFn: async () => {
-          const decryptedKey = prov.apiKey ? await decryptText(prov.apiKey) : '';
-          const res = await fetch('/api/discovery', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ baseUrl: prov.baseUrl, apiKey: decryptedKey, providerType: prov.type }),
-          });
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error || 'Connection refused or model list unsupported by this endpoint.');
-          return data.models as string[];
-        },
-        staleTime: 5 * 1000 * 60,
-      });
-      if (models && models.length > 0) {
-        onUpdateProviders(providers.map((p) => p.id === prov.id ? { ...p, models } : p));
+      const data = await discoverRequest({ providerId: provider.id });
+      if (!data.success) throw new Error(data.error || 'Connection refused or model list unsupported by this endpoint.');
+      const models = data.models ?? [];
+      if (models.length > 0) {
+        await updateProvider.mutateAsync({ id: provider.id, patch: { models } });
       }
-    } catch (e: any) {
-      setDiscoveryError(e.message || 'Error occurred during connection.');
+    } catch (error) {
+      setDiscoveryError(error instanceof Error ? error.message : 'Error occurred during connection.');
     } finally {
       setDiscoveringId(null);
+    }
+  };
+
+  const handleSetActive = async (provider: Provider) => {
+    try {
+      await Promise.all(
+        providers.map((current) => {
+          const shouldBeActive = current.id === provider.id;
+          if (current.isActive === shouldBeActive) return Promise.resolve();
+          return updateProvider.mutateAsync({ id: current.id, patch: { isActive: shouldBeActive } });
+        }),
+      );
+    } catch {
+      // Leave the previous selection; the list re-reads on the next mount.
+    }
+  };
+
+  const handleAddPreset = async (type: ProviderType) => {
+    const defaults = PROVIDER_DEFAULTS[type];
+    try {
+      await createProvider.mutateAsync({
+        id: crypto.randomUUID(),
+        name: defaults.name,
+        type,
+        baseUrl: defaults.baseUrl,
+        models: defaults.models,
+        isActive: providers.length === 0,
+      });
+    } catch {
+      // Surface failures through the discovery banner on the next action.
     }
   };
 
@@ -231,10 +262,11 @@ export function ProviderDashboard({ isOpen, onClose, providers, onUpdateProvider
                   </div>
                   <ProviderList
                     providers={providers}
-                    onUpdateProviders={onUpdateProviders}
                     onEdit={handleEdit}
-                    onDiscover={discoverModels}
+                    onDiscover={handleDiscover}
                     onDelete={(id) => setDeleteConfirmId(id)}
+                    onSetActive={handleSetActive}
+                    onAddPreset={handleAddPreset}
                     discoveringId={discoveringId}
                     discoveryError={discoveryError}
                   />
@@ -252,7 +284,7 @@ export function ProviderDashboard({ isOpen, onClose, providers, onUpdateProvider
       <ConfirmModal
         isOpen={deleteConfirmId !== null}
         onClose={() => setDeleteConfirmId(null)}
-        onConfirm={() => { if (deleteConfirmId) { executeDelete(deleteConfirmId); } }}
+        onConfirm={() => { if (deleteConfirmId) void executeDelete(deleteConfirmId); }}
         title="Delete Provider"
         message="Are you sure you want to delete this provider? This action cannot be undone and all associated models will be removed."
         confirmLabel="Delete"

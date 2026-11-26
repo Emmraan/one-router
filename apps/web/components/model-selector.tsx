@@ -4,7 +4,6 @@ import * as React from 'react';
 import { 
   ChevronDown, Search, Star, History, Check, Cpu, Sparkles 
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Provider } from '../lib/provider-types';
 
 interface ModelSelectorProps {
@@ -175,16 +174,11 @@ export function ModelSelector({
       </button>
 
       {/* Dropdown Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute left-0 mt-2 w-72 md:w-80 bg-white dark:bg-[#0d0d0d] rounded-2xl shadow-2xl z-[100] flex flex-col overflow-hidden max-h-[480px] border border-zinc-200 dark:border-zinc-800"
-            id="model-router-dropdown"
-          >
+      {isOpen && (
+        <div
+          className="absolute left-0 mt-2 w-72 md:w-80 bg-white dark:bg-[#0d0d0d] rounded-2xl shadow-2xl z-[100] flex flex-col overflow-hidden max-h-[480px] border border-zinc-200 dark:border-zinc-800 animate-fade-in"
+          id="model-router-dropdown"
+        >
             {/* Realtime Search Input */}
             <div className="p-3 border-b border-zinc-100/50 dark:border-zinc-800/30 bg-zinc-50/30 dark:bg-zinc-950/10 shrink-0">
               <div className="relative">
@@ -366,9 +360,8 @@ export function ModelSelector({
               <span>Total Engine Nodes:</span>
               <span className="font-bold text-emerald-500">{allModels.length}</span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

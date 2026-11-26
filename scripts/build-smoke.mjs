@@ -10,22 +10,21 @@ function isFile(file) {
   }
 }
 
-function readManifest(file) {
+function isDir(file) {
   try {
-    return JSON.parse(readFileSync(file, 'utf8'));
+    return statSync(file).isDirectory();
   } catch {
-    return null;
+    return false;
   }
 }
 
 export function checkBuildOutput(appDir = 'apps/web') {
-  const nextDir = path.join(appDir, '.next');
+  const outDir = path.join(appDir, 'out');
   const checks = [];
 
-  const buildIdFile = path.join(nextDir, 'BUILD_ID');
   let buildId = '';
   try {
-    buildId = readFileSync(buildIdFile, 'utf8').trim();
+    buildId = readFileSync(path.join(appDir, '.next', 'BUILD_ID'), 'utf8').trim();
   } catch {
     buildId = '';
   }
@@ -35,31 +34,41 @@ export function checkBuildOutput(appDir = 'apps/web') {
     detail: buildId.length > 0 ? buildId : 'missing .next/BUILD_ID',
   });
 
-  const appPaths = readManifest(path.join(nextDir, 'server/app-paths-manifest.json'));
-  const appBuild = readManifest(path.join(nextDir, 'app-build-manifest.json'));
-  const hasAppPath = typeof appPaths?.['/page'] === 'string';
-  const hasWebpackPage =
-    Array.isArray(appBuild?.pages?.['/page']) && appBuild.pages['/page'].length > 0;
   checks.push({
-    name: 'page-route',
-    ok: hasAppPath || hasWebpackPage,
-    detail: 'route /page in app-paths-manifest.json or app-build-manifest.json',
+    name: 'export-index',
+    ok: isFile(path.join(outDir, 'index.html')),
+    detail: 'out/index.html',
   });
 
   checks.push({
-    name: 'page-server',
-    ok: isFile(path.join(nextDir, 'server/app/page.js')),
-    detail: '.next/server/app/page.js',
+    name: 'export-login',
+    ok: isFile(path.join(outDir, 'login', 'index.html')),
+    detail: 'out/login/index.html',
   });
 
-  const standaloneEntries = [
-    path.join(nextDir, 'standalone/apps/web/server.js'),
-    path.join(nextDir, 'standalone/server.js'),
-  ];
   checks.push({
-    name: 'standalone',
-    ok: standaloneEntries.some(isFile),
-    detail: 'standalone server entrypoint',
+    name: 'export-change-password',
+    ok: isFile(path.join(outDir, 'change-password', 'index.html')),
+    detail: 'out/change-password/index.html',
+  });
+
+  checks.push({
+    name: 'export-assets',
+    ok: isDir(path.join(outDir, '_next')),
+    detail: 'out/_next assets',
+  });
+
+  let hasScript = false;
+  try {
+    const html = readFileSync(path.join(outDir, 'index.html'), 'utf8');
+    hasScript = /<script[^>]+src=/.test(html);
+  } catch {
+    hasScript = false;
+  }
+  checks.push({
+    name: 'index-scripts',
+    ok: hasScript,
+    detail: 'out/index.html references a client script',
   });
 
   return { ok: checks.every((check) => check.ok), checks };

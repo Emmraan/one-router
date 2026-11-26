@@ -1,43 +1,35 @@
 'use client';
 
 import * as React from 'react';
+import { enhancePrompt } from '../lib/api';
 
-export function useEnhance(inputText: string, setInputText: (val: string) => void) {
+export function useEnhance(inputText: string, setInputText: (value: string) => void) {
   const [enhancing, setEnhancing] = React.useState(false);
-  const [enhancedPreview, setEnhancedPreview] = React.useState<string | null>(null);
+  const [enhancedPreview, setEnhancedPreview] = React.useState('');
   const [originalPrompt, setOriginalPrompt] = React.useState('');
 
   const triggerEnhance = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || enhancing) return;
     setEnhancing(true);
-    setEnhancedPreview(null);
+    setOriginalPrompt(inputText);
     try {
-      const res = await fetch('/api/enhance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: inputText }),
-      });
-      const data = await res.json();
-      if (data.enhanced) {
-        setEnhancedPreview(data.enhanced);
-      }
-    } catch (e) {
-      console.error('Enhancer request failed', e);
+      const data = await enhancePrompt(inputText);
+      setEnhancedPreview(data.enhanced || inputText);
+    } catch (error) {
+      console.error('Prompt enhancement failed:', error);
+      setEnhancedPreview(inputText);
     } finally {
       setEnhancing(false);
     }
   };
 
   const applyEnhancedPrompt = () => {
-    if (enhancedPreview) {
-      setOriginalPrompt(inputText);
-      setInputText(enhancedPreview);
-      setEnhancedPreview(null);
-    }
+    if (enhancedPreview) setInputText(enhancedPreview);
   };
 
   const discardEnhancedPrompt = () => {
-    setEnhancedPreview(null);
+    setEnhancedPreview('');
+    setOriginalPrompt('');
   };
 
   return {

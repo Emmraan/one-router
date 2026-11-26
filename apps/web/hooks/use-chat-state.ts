@@ -1,210 +1,161 @@
 'use client';
 
-/* eslint-disable react-hooks/set-state-in-effect -- localStorage hydration runs once on mount; P4 replaces this hook with server data. */
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import * as React from 'react';
-import type { Chat, Provider } from '../lib/provider-types';
+import { useChats, useDeleteChat, useUpdateChat } from './use-chats';
+import { useMessages } from './use-messages';
+import { useProviders } from './use-providers';
+import { useTheme } from './use-settings';
+import type { MessageDto } from '../lib/api-types';
+import type { Chat, Message, Provider } from '../lib/provider-types';
 
-const PROVIDER_DEFAULTS: Provider[] = [
-  {
-    id: 'p-openai', name: 'OpenAI Direct', type: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-4o', 'gpt-4o-mini', 'o1-mini'],
-    isActive: true,
-  },
-  {
-    id: 'p-gemini', name: 'Gemini AI Studio', type: 'gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com',
-    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'],
-    isActive: false,
-  },
-  {
-    id: 'p-ollama', name: 'Ollama local', type: 'ollama',
-    baseUrl: 'http://localhost:11434',
-    models: ['llama3', 'mistral', 'gemma'],
-    isActive: false,
-  },
-];
+const SIDEBAR_KEY = 'onerouter_sidebar_open';
+
+function toMessage(dto: MessageDto): Message {
+  return {
+    id: dto.id,
+    role: dto.role,
+    content: dto.content,
+    timestamp: dto.createdAt,
+    model: dto.model ?? undefined,
+    isRegenerated: dto.isRegenerated,
+  };
+}
 
 export function useChatState() {
-  const [sidebarOpen, setSidebarOpen] = React.useState(() => {
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem('onerouter_sidebar_open') !== 'false';
-  });
-  React.useEffect(() => {
-    localStorage.setItem('onerouter_sidebar_open', String(sidebarOpen));
-  }, [sidebarOpen]);
+  const { data: providerDtos = [] } = useProviders();
+  const { data: chatDtos = [] } = useChats();
+  const { theme, toggleTheme } = useTheme();
+  const updateChatMutation = useUpdateChat();
+  const deleteChatMutation = useDeleteChat();
 
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [dashboardOpen, setDashboardOpen] = React.useState(false);
-  const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
-  const [providers, setProviders] = React.useState<Provider[]>([]);
-  const [chats, setChats] = React.useState<Chat[]>([]);
   const [activeChatId, setActiveChatId] = React.useState<string | null>(null);
   const [selectedModel, setSelectedModel] = React.useState<{ providerId: string; model: string } | null>(null);
-  const [isTempMode, setIsTempMode] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
+
+  const { data: messageDtos = [] } = useMessages(activeChatId);
 
   React.useEffect(() => {
     setMounted(true);
-
-    const savedTheme = localStorage.getItem('onerouter_theme') as 'light' | 'dark';
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-    } else {
-      setTheme('dark');
-      localStorage.setItem('onerouter_theme', 'dark');
-      document.documentElement.classList.add('dark');
-    }
-
-    const savedProviders = localStorage.getItem('onerouter_providers');
-    let loadedProviders: Provider[] = [];
-    if (savedProviders) {
-      try {
-        loadedProviders = JSON.parse(savedProviders);
-      } catch (e) {
-        console.error('Failed to parse providers, resetting default ones');
-      }
-    }
-
-    if (loadedProviders.length === 0) {
-      loadedProviders = PROVIDER_DEFAULTS;
-      localStorage.setItem('onerouter_providers', JSON.stringify(loadedProviders));
-    }
-    setProviders(loadedProviders);
-
-    const savedChats = localStorage.getItem('onerouter_chats');
-    if (savedChats) {
-      try {
-        const loadedChats = JSON.parse(savedChats);
-        const filtered = loadedChats
-          .filter((c: Chat) => !c.isTemporary)
-          .map((c: Chat) => ({ ...c, committed: true }));
-        setChats(filtered);
-        if (filtered.length > 0) {
-          setActiveChatId(filtered[0].id);
-        }
-      } catch (e) {
-        console.error('Failed parsing chats list');
-      }
-    }
+    const stored = localStorage.getItem(SIDEBAR_KEY);
+    if (stored !== null) setSidebarOpen(stored === 'true');
   }, []);
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(nextTheme);
-    localStorage.setItem('onerouter_theme', nextTheme);
-    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
-  };
+  React.useEffect(() => {
+    if (mounted) localStorage.setItem(SIDEBAR_KEY, String(sidebarOpen));
+  }, [sidebarOpen, mounted]);
 
-  const handleUpdateProviders = (newProviders: Provider[]) => {
-    setProviders(newProviders);
-    localStorage.setItem('onerouter_providers', JSON.stringify(newProviders));
-  };
+  const providers: Provider[] = React.useMemo(
+    () =>
+      providerDtos.map((provider) => ({
+        id: provider.id,
+        name: provider.name,
+        type: provider.type,
+        baseUrl: provider.baseUrl,
+        models: provider.models,
+        isActive: provider.isActive,
+        hasApiKey: provider.hasApiKey,
+        createdAt: provider.createdAt,
+        updatedAt: provider.updatedAt,
+      })),
+    [providerDtos],
+  );
 
-  const createNewChat = (tempMode = false) => {
-    const activeP = providers.find((p) => p.isActive) || providers[0];
-    const defaultModel = activeP?.models?.[0] || 'default';
+  const messages: Message[] = React.useMemo(() => messageDtos.map(toMessage), [messageDtos]);
 
-    const newChat: Chat = {
-      id: Math.random().toString(36).substring(7),
-      title: tempMode ? 'Ephemeral Private Chat' : '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      providerId: activeP?.id || '',
-      model: defaultModel,
-      messages: [],
-      isTemporary: tempMode,
-    };
+  const chats: Chat[] = React.useMemo(
+    () =>
+      chatDtos
+        .map((chat) => ({
+          id: chat.id,
+          title: chat.title,
+          createdAt: chat.createdAt,
+          updatedAt: chat.updatedAt,
+          providerId: chat.providerId,
+          model: chat.model,
+          isPinned: chat.isPinned,
+          manualTitle: chat.manualTitle,
+          messages: chat.id === activeChatId ? messages : [],
+        }))
+        .sort((a, b) => b.updatedAt - a.updatedAt),
+    [chatDtos, activeChatId, messages],
+  );
 
-    setIsTempMode(tempMode);
+  const activeChat = chats.find((chat) => chat.id === activeChatId) ?? null;
+  const activeProvider = providers.find((provider) => provider.isActive) ?? providers[0];
+  const activeProviderId = selectedModel?.providerId ?? activeChat?.providerId ?? activeProvider?.id ?? '';
+  const activeModel = selectedModel?.model ?? activeChat?.model ?? activeProvider?.models[0] ?? '';
 
-    if (tempMode) {
-      setChats((prev) => [newChat, ...prev]);
-    }
-
-    setActiveChatId(newChat.id);
-  };
-
-  const deleteChat = (id: string) => {
-    setChats((prev) => {
-      const filtered = prev.filter((c) => c.id !== id);
-      localStorage.setItem('onerouter_chats', JSON.stringify(filtered.filter(c => c.committed !== false)));
-      return filtered;
+  // Opening a chat adopts the model recorded on it so the header matches the
+  // transcript the assistant actually used.
+  React.useEffect(() => {
+    if (!activeChat) return;
+    setSelectedModel({
+      providerId: activeChat.providerId ?? activeProvider?.id ?? '',
+      model: activeChat.model,
     });
-    setActiveChatId((prev) => {
-      if (prev === id) {
-        const remaining = chats.filter((c) => c.id !== id);
-        return remaining.length > 0 ? remaining[0].id : null;
+  // The effect intentionally keys off primitive fields; depending on the
+  // `activeChat` object would re-run on every streamed message.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChatId, activeChat?.id, activeChat?.model, activeChat?.providerId, activeProvider?.id]);
+
+  const selectModelAndProvider = React.useCallback(
+    (providerId: string, model: string) => {
+      setSelectedModel({ providerId, model });
+      if (activeChatId) {
+        updateChatMutation.mutate({ id: activeChatId, patch: { providerId, model } });
       }
-      return prev;
-    });
-  };
+    },
+    [activeChatId, updateChatMutation],
+  );
 
-  const renameChat = (id: string, newTitle: string) => {
-    setChats((prev) => {
-      const updated = prev.map((c) => {
-        if (c.id === id) {
-          return { ...c, title: newTitle, updatedAt: Date.now() };
-        }
-        return c;
-      });
-      localStorage.setItem('onerouter_chats', JSON.stringify(updated.filter(c => c.committed !== false)));
-      return updated;
-    });
-  };
+  const createNewChat = React.useCallback(() => {
+    setActiveChatId(null);
+  }, []);
 
-  const togglePinChat = (id: string) => {
-    setChats((prev) => {
-      const updated = prev.map((c) => {
-        if (c.id === id) {
-          return { ...c, isPinned: !c.isPinned };
-        }
-        return c;
-      });
-      localStorage.setItem('onerouter_chats', JSON.stringify(updated.filter(c => c.committed !== false)));
-      return updated;
-    });
-  };
+  const deleteChat = React.useCallback(
+    (id: string) => {
+      deleteChatMutation.mutate(id);
+      if (activeChatId === id) setActiveChatId(null);
+    },
+    [activeChatId, deleteChatMutation],
+  );
 
-  const selectModelAndProvider = (providerId: string, model: string) => {
-    setSelectedModel({ providerId, model });
+  const renameChat = React.useCallback(
+    (id: string, newTitle: string) => {
+      updateChatMutation.mutate({ id, patch: { title: newTitle, source: 'manual' } });
+    },
+    [updateChatMutation],
+  );
 
-    setProviders((prev) => {
-      const updated = prev.map((p) => ({
-        ...p,
-        isActive: p.id === providerId,
-      }));
-      localStorage.setItem('onerouter_providers', JSON.stringify(updated));
-      return updated;
-    });
-
-    if (activeChatId) {
-      setChats((prev) => {
-        const updated = prev.map((c) => {
-          if (c.id === activeChatId) {
-            return { ...c, providerId, model };
-          }
-          return c;
-        });
-        localStorage.setItem('onerouter_chats', JSON.stringify(updated.filter(c => c.committed !== false)));
-        return updated;
-      });
-    }
-  };
+  const togglePinChat = React.useCallback(
+    (id: string) => {
+      const chat = chats.find((item) => item.id === id);
+      if (!chat) return;
+      updateChatMutation.mutate({ id, patch: { isPinned: !chat.isPinned } });
+    },
+    [chats, updateChatMutation],
+  );
 
   return {
-    sidebarOpen, setSidebarOpen,
-    dashboardOpen, setDashboardOpen,
-    theme, setTheme,
-    providers, setProviders,
-    chats, setChats,
-    activeChatId, setActiveChatId,
-    selectedModel, setSelectedModel,
-    isTempMode, setIsTempMode,
+    sidebarOpen,
+    setSidebarOpen,
+    dashboardOpen,
+    setDashboardOpen,
+    theme,
+    providers,
+    chats,
+    messages,
+    activeChatId,
+    setActiveChatId,
+    activeChat,
+    activeModel,
+    activeProviderId,
     mounted,
     toggleTheme,
-    handleUpdateProviders,
     createNewChat,
     deleteChat,
     renameChat,

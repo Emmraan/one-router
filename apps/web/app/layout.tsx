@@ -1,30 +1,23 @@
-import type {Metadata} from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
-import './globals.css'; // Global styles
+import type { Metadata } from 'next';
+import './globals.css';
 import { Providers } from './providers';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-mono',
-});
 
 export const metadata: Metadata = {
   title: 'ONE ROUTER - Custom Multi-Provider AI Chat Client',
-  description: 'A production-grade, highly customizable multi-provider AI chat client across OpenAI, Anthropic, Gemini, and Ollama.',
+  description:
+    'A single local workspace that routes chats across OpenAI, Anthropic, Gemini, and Ollama.',
 };
 
-export default function RootLayout({children}: {children: React.ReactNode}) {
+// The theme lives in a cookie so the first paint matches the server setting
+// without a flash. The React layer keeps the cookie in sync afterwards.
+const themeScript = `(function(){try{var m=document.cookie.match(/(?:^|; )one_router_theme=(dark|light)/);var t=m?m[1]:'dark';var r=document.documentElement;if(t==='dark'){r.classList.add('dark')}else{r.classList.remove('dark')}}catch(e){}})();`;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="font-sans antialiased" suppressHydrationWarning>
-        <Providers>
-          {children}
-        </Providers>
+    <html lang="en" suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

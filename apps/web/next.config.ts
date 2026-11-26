@@ -1,23 +1,15 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() || undefined;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // The UI is a static bundle; Hono owns every API, auth, and file route.
+  output: 'export',
+  trailingSlash: true,
+  images: { unoptimized: true },
   transpilePackages: ['@one-router/core'],
-  typescript: {
-    ignoreBuildErrors: false,
-  },
-  // Allow access to remote image placeholder.
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**', // This allows any path under the hostname
-      },
-    ],
-  },
-  output: 'standalone',
+  basePath,
 };
 
 export default nextConfig;
