@@ -26,8 +26,6 @@ jobs:
     name: Integration (temp libSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      ONE_ROUTER_DATA_DIR: ${{ runner.temp }}/one-router-data
     steps:
       - uses: actions/checkout@v4
 
