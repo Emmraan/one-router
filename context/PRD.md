@@ -2,11 +2,11 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft v0.7 — all decisions resolved |
+| Status | Locked v0.7 — approved for implementation |
 | Date | 2026-11-26 |
 | Owner | Emmraan |
 | Repo | `one-router` (currently a single Next.js app) |
-| Next artifact | `context/PLAN.md` — **do not create until the owner explicitly asks** |
+| Next artifact | `context/PLAN.md` — MVP phase plan (authorized 2026-11-26) |
 
 > v0.7 changes: verification strategy added in Section 6.19. Heavy environment tests
 > run in CI only; one smoke suite covers the packed npm tarball, the Docker image, and
@@ -832,11 +832,11 @@ self-hosting docs.
 
 ## 16. Next Step
 
-1. Owner final review of v0.7; all Section 12 questions are resolved and Network O is approved.
-2. Mark the PRD **Locked** when the owner approves the final draft.
-3. **Do not create `context/PLAN.md` until the owner explicitly asks.**
-4. During implementation, refine Network O geometry and build the full lockup and icon assets.
-5. After the owner's go-ahead, create `context/PLAN.md` with phases, file-level changes,
-   migration order, verification steps, and the MVP cut line.
+1. PRD v0.7 is locked and archived on the `docs/prd-one-router` branch.
+2. `context/PLAN.md` is the active implementation artifact; it defines the MVP cut line.
+3. Keep the post-MVP backlog in Section 13.
+4. Once `PLAN.md` covers the MVP, rewrite the MVP sections to the clean template and
+   keep the post-MVP backlog.
+5. During implementation, refine Network O geometry and build the full lockup and icon assets.
 6. Follow `AGENTS.md` for gates, branches, skills, progress, testing, security review,
    and UI rules.
