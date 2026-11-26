@@ -1,0 +1,55 @@
+name: Scratch Phase 3 Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - phase-3-server
+    paths:
+      - 'packages/server/**'
+      - 'packages/db/**'
+      - 'packages/core/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'vitest.config.ts'
+      - '.github/workflows/scratch-phase-3.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scratch-phase-3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Integration (temp libSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ONE_ROUTER_DATA_DIR: ${{ runner.temp }}/one-router-data
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Integration tests
+        run: node scripts/ci-run.mjs pnpm test:integration
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-logs
+          path: .ci-logs
+          if-no-files-found: ignore

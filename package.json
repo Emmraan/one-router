@@ -17,6 +17,7 @@
     "typecheck:changed": "node scripts/changed.mjs typecheck",
     "test": "vitest run",
     "test:changed": "node scripts/changed.mjs test",
+    "test:integration": "vitest run packages/server packages/db/src",
     "budget": "node scripts/budget.mjs",
     "audit:gate": "node scripts/audit-gate.mjs",
     "smoke:build": "node scripts/build-smoke.mjs",

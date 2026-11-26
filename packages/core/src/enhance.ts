@@ -9,6 +9,7 @@ export interface EnhancePromptOptions {
   prompt: string;
   apiKey?: string;
   fetch?: FetchLike;
+  signal?: AbortSignal;
 }
 
 export async function enhancePrompt(
@@ -27,6 +28,7 @@ export async function enhancePrompt(
     const text = await generateGeminiText({
       apiKey: options.apiKey,
       fetch: options.fetch,
+      signal: options.signal,
       prompt: `You are an expert prompt engineer. Enhance the following user prompt to make it clear, detailed, structured, and optimized to produce the highest quality response from an AI assistant. Retain all original intent and key constraints. Keep it relatively concise but highly optimized. Output only the final rewritten prompt itself, with no intro or outro comments.
 
 User Prompt: "${prompt}"`,
