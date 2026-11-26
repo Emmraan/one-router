@@ -44,8 +44,9 @@ Phase 0 wires these scripts before feature work. Until then the repo only has
   commit. Do not open a branch for those.
 - Merge with `--no-ff` and keep the branch. `main` moves only by merge or by those
   direct small commits.
-- Do not push `main` until the MVP is complete. Push the phase or feature branch
-  and run CI there; `main` stays local until the owner releases it.
+- Do not push `main` until the MVP is complete. Push a phase or feature branch
+  only when CI needs to verify behavior or integration; a branch that only adds
+  checks and gates stays local. `main` stays local until the owner releases it.
 - An explicit instruction from the owner always wins.
 
 ### Skills
