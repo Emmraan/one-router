@@ -1,0 +1,10 @@
+export { openDatabase, type Database } from './client';
+export { migrate } from './migrate';
+export { seedOwner } from './seed';
+export { resolveMasterKey } from './crypto/key';
+export { hashPassword, verifyPassword } from './crypto/password';
+export { encryptBytes, decryptBytes, encryptText, decryptText } from './crypto/encryption';
+export { createRepositories } from './repositories/repositories';
+export { searchChats } from './search';
+export { exportArchive, exportPlaintext, importArchive, previewArchive } from './archive/transfer';
+export type { ArchiveData, ArchiveManifest } from './archive/schema';
