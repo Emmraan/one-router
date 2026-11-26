@@ -7,7 +7,7 @@ import { decodeChat } from '../repositories/chats';
 import { fieldContext, seal, unseal } from '../repositories/codec';
 import { decodeMessage } from '../repositories/messages';
 import { archiveDocument, decodeArchive, decodePlaintext, encodeArchive, isEncryptedArchive } from './format';
-import { MAX_ARCHIVE_BYTES, type ArchiveData } from './schema';
+import { MAX_ARCHIVE_BYTES, archiveCounts, validateArchiveData, type ArchiveData } from './schema';
 
 type ExternalFile = { id: string; storage: 'filesystem' | 's3'; objectKey: string; size: number };
 type ExportOptions = { readAttachment?: (file: ExternalFile) => Promise<Uint8Array> };
@@ -95,6 +95,18 @@ export async function previewArchive(bytes: Uint8Array, passphrase?: string) {
 export async function importArchive(store: Store, owner: string, bytes: Uint8Array, options: { mode: 'merge' | 'replace'; passphrase?: string }) {
   if (!['merge', 'replace'].includes(options.mode)) throw new Error('Invalid archive import mode');
   const { manifest, data } = isEncryptedArchive(bytes) ? await decodeArchive(bytes, options.passphrase ?? '') : decodePlaintext(bytes);
+  const imported = await importData(store, owner, data, options.mode);
+  return { manifest, ...imported };
+}
+
+export async function importLegacyData(store: Store, owner: string, input: unknown) {
+  const data = validateArchiveData(input);
+  const imported = await importData(store, owner, data, 'merge');
+  return { counts: archiveCounts(data), ...imported };
+}
+
+export async function importData(store: Store, owner: string, data: ArchiveData, mode: 'merge' | 'replace') {
+  if (!['merge', 'replace'].includes(mode)) throw new Error('Invalid archive import mode');
   const maps = {
     providers: new Map(data.providers.map((row) => [row.id, randomUUID()])), chats: new Map(data.chats.map((row) => [row.id, randomUUID()])),
     messages: new Map(data.messages.map((row) => [row.id, randomUUID()])), attachments: new Map(data.attachments.map((row) => [row.id, randomUUID()])),
@@ -104,7 +116,7 @@ export async function importArchive(store: Store, owner: string, bytes: Uint8Arr
   await atomic(store, async (tx) => {
     const [user] = await tx.orm.select({ id: users.id }).from(users).where(eq(users.id, owner)).limit(1);
     if (!user) throw new Error('Archive owner not found');
-    if (options.mode === 'replace') {
+    if (mode === 'replace') {
       for (let offset = 0; ; offset += 500) {
         const batch = await tx.orm.select({ id: attachments.id, storage: attachments.storage, objectKey: attachments.objectKey })
           .from(attachments).where(and(eq(attachments.userId, owner), isNotNull(attachments.objectKey)))
@@ -161,10 +173,10 @@ export async function importArchive(store: Store, owner: string, bytes: Uint8Arr
       await tx.orm.insert(settings).values({ userId: owner, key, value: encrypted, updatedAt: Date.now() })
         .onConflictDoUpdate({ target: [settings.userId, settings.key], set: { value: encrypted, updatedAt: Date.now() } });
     }
-    if (options.mode === 'replace' || data.profile !== null) {
+    if (mode === 'replace' || data.profile !== null) {
       await tx.orm.update(users).set({ profile: data.profile === null ? null : seal(tx, owner, 'users', owner, 'profile', JSON.stringify(data.profile)), updatedAt: Date.now() }).where(eq(users.id, owner));
     }
   });
-  return { manifest, idMap: { providers: Object.fromEntries(maps.providers), chats: Object.fromEntries(maps.chats),
+  return { idMap: { providers: Object.fromEntries(maps.providers), chats: Object.fromEntries(maps.chats),
     messages: Object.fromEntries(maps.messages), attachments: Object.fromEntries(maps.attachments) }, externalAttachments };
 }

@@ -62,7 +62,7 @@ test('owner bootstrap through logout on the static export', async ({ page }) => 
     await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible();
 
     await page.reload();
-    await page.locator('#onerouter-sidebar-shell').getByText('ping', { exact: true }).click();
+    await page.locator('#onerouter-sidebar-shell').getByText('Fixture reply.', { exact: true }).click();
     await expect(page.getByText('Fixture reply.').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('ping').first()).toBeVisible();
   });

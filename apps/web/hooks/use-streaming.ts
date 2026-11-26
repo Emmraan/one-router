@@ -6,8 +6,11 @@ import {
   apiUrl,
   createChat,
   createMessage,
+  deleteFile,
   deleteMessage,
+  generateTitle,
   updateChat,
+  updateMessage,
 } from '../lib/api';
 import { SseDecoder } from '../lib/sse';
 import { queryKeys } from '../lib/query';
@@ -20,6 +23,14 @@ interface UseStreamingDeps {
   providers: Provider[];
   activeModel: string;
   providerId: string;
+  onTemporaryTitle?: (chatId: string, title: string) => void;
+}
+
+const TEMPORARY_PREFIX = 'temporary-';
+const isTemporaryId = (id: string) => id.startsWith(TEMPORARY_PREFIX);
+
+function attachmentMeta(attachments: Attachment[]): Attachment[] {
+  return attachments.map(({ id, name, type, size, url }) => ({ id, name, type, size, url }));
 }
 
 export function useStreaming({
@@ -28,10 +39,15 @@ export function useStreaming({
   providers,
   activeModel,
   providerId,
+  onTemporaryTitle,
 }: UseStreamingDeps) {
   const queryClient = useQueryClient();
   const [isStreaming, setIsStreaming] = React.useState(false);
+  const [sendError, setSendError] = React.useState('');
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const streamingRef = React.useRef(false);
+
+  React.useEffect(() => () => abortControllerRef.current?.abort(), []);
 
   const readMessages = React.useCallback(
     (chatId: string): MessageDto[] => queryClient.getQueryData<MessageDto[]>(queryKeys.messages(chatId)) ?? [],
@@ -46,99 +62,146 @@ export function useStreaming({
   );
 
   const handleStopStreaming = React.useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
   }, []);
 
   const handleSendMessage = React.useCallback(
     async (
       inputText: string,
-      _attachmentsBuffer: Attachment[],
+      attachmentsBuffer: Attachment[],
       setInputText: (value: string) => void,
       clearAttachments: () => void,
       customPrompt?: string,
       forceRegenerationIndex?: number,
       isUserEditIndex?: number,
     ) => {
+      if (streamingRef.current) return;
+      setSendError('');
       const promptToSend = (customPrompt ?? inputText).trim();
-      if (
-        !promptToSend &&
-        forceRegenerationIndex === undefined &&
-        isUserEditIndex === undefined
-      ) {
+      const ready = attachmentsBuffer.filter((item) => item.status === 'ready');
+      const hasPending = attachmentsBuffer.some((item) => item.status === 'uploading');
+      const hasFailed = attachmentsBuffer.some((item) => item.status === 'error');
+      if (hasPending || hasFailed) {
+        setSendError('Wait for uploads to finish or remove failed files before sending.');
         return;
       }
-      if (isStreaming) return;
+      if (!promptToSend && ready.length === 0 && forceRegenerationIndex === undefined && isUserEditIndex === undefined) {
+        return;
+      }
 
       const provider = providers.find((p) => p.id === providerId) ?? providers.find((p) => p.isActive) ?? providers[0];
       if (!provider) {
-        alert('Configure and select an active provider first inside Providers Central.');
+        setSendError('Configure and select an active provider in Providers Central.');
         return;
       }
       if (!activeModel) {
-        alert('No models found for this provider config.');
+        setSendError('No model is selected for this provider.');
         return;
       }
 
+      streamingRef.current = true;
       setIsStreaming(true);
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      setInputText('');
-      clearAttachments();
-
       let chatId = activeChatId;
+      let temporary = Boolean(chatId && isTemporaryId(chatId));
       let assistantTempId: string | null = null;
+      let userSaved = false;
 
       try {
-        const chatList = queryClient.getQueryData<ChatDto[]>(queryKeys.chats) ?? [];
-        const existingChat = chatId ? chatList.find((c) => c.id === chatId) : undefined;
-
         if (!chatId) {
-          const title = promptToSend.split(/\s+/).slice(0, 10).join(' ') || 'New Chat';
+          const title = promptToSend.split(/\s+/).slice(0, 10).join(' ').slice(0, 80) || 'New Chat';
           const created = await createChat({ model: activeModel, providerId: provider.id, title });
           chatId = created.chat.id;
+          temporary = false;
           setActiveChatId(chatId);
           writeMessages(chatId, () => []);
-        } else if (existingChat && (existingChat.model !== activeModel || existingChat.providerId !== provider.id)) {
-          await updateChat(chatId, { model: activeModel, providerId: provider.id });
+        } else if (!temporary) {
+          const chatList = queryClient.getQueryData<ChatDto[]>(queryKeys.chats) ?? [];
+          const existing = chatList.find((chat) => chat.id === chatId);
+          if (existing && (existing.model !== activeModel || existing.providerId !== provider.id)) {
+            await updateChat(chatId, { model: activeModel, providerId: provider.id });
+          }
         }
 
         const currentChatId = chatId;
         let local = readMessages(currentChatId);
+        let firstExchange = false;
 
-        // Editing or regenerating truncates the tail on the server first so the
-        // transcript and the model context stay in sync.
-        if (isUserEditIndex !== undefined || forceRegenerationIndex !== undefined) {
-          const cut = isUserEditIndex ?? forceRegenerationIndex ?? 0;
-          const trailing = local.slice(cut);
-          for (const message of trailing) {
-            try {
+        if (isUserEditIndex !== undefined) {
+          const target = local[isUserEditIndex];
+          if (!target) throw new Error('The message being edited is no longer available.');
+          const updated = { ...target, content: promptToSend, updatedAt: Date.now() };
+          if (!temporary) {
+            await updateMessage(target.id, promptToSend);
+            for (const message of local.slice(isUserEditIndex + 1)) {
               await deleteMessage(message.id);
-            } catch {
-              // Already gone; keep going.
             }
+          } else {
+            await Promise.all(local.slice(isUserEditIndex + 1)
+              .flatMap((message) => message.attachments ?? [])
+              .map((attachment) => deleteFile(attachment.id, true).catch(() => undefined)));
           }
-          local = local.slice(0, cut);
+          local = [...local.slice(0, isUserEditIndex), updated];
+          writeMessages(currentChatId, () => local);
+          userSaved = true;
+        } else if (forceRegenerationIndex !== undefined) {
+          if (!temporary) {
+            for (const message of local.slice(forceRegenerationIndex)) {
+              await deleteMessage(message.id);
+            }
+          } else {
+            await Promise.all(local.slice(forceRegenerationIndex)
+              .flatMap((message) => message.attachments ?? [])
+              .map((attachment) => deleteFile(attachment.id, true).catch(() => undefined)));
+          }
+          local = local.slice(0, forceRegenerationIndex);
+          writeMessages(currentChatId, () => local);
+          firstExchange = false;
+        } else {
+          const attachments = attachmentMeta(ready);
+          const userMessage: MessageDto = {
+            id: temporary ? `temporary-message-${crypto.randomUUID()}` : '',
+            chatId: currentChatId,
+            role: 'user',
+            content: promptToSend,
+            model: null,
+            position: local.length,
+            isRegenerated: false,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            attachments: attachments.length ? attachments : undefined,
+          };
+          if (!temporary) {
+            const created = await createMessage(currentChatId, {
+              role: 'user',
+              content: promptToSend,
+              attachmentIds: attachments.map((item) => item.id),
+            });
+            Object.assign(userMessage, created.message);
+          }
+          local = [...local, userMessage];
+          writeMessages(currentChatId, () => local);
+          firstExchange = local.length === 1;
+          userSaved = true;
         }
 
-        if (forceRegenerationIndex === undefined) {
-          const created = await createMessage(currentChatId, { role: 'user', content: promptToSend });
-          local = [...local, created.message];
+        if (userSaved) {
+          setInputText('');
+          clearAttachments();
         }
 
-        writeMessages(currentChatId, () => local);
-
-        const outgoing = local.map((m) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-          timestamp: m.createdAt,
-          model: m.model ?? undefined,
+        const outgoing = local.map((message) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          timestamp: message.createdAt,
+          model: message.model ?? undefined,
+          attachments: message.attachments?.map(({ id, name, type, size, url }) => ({ id, name, type, size, url })),
         }));
 
-        assistantTempId = `temp-${Math.random().toString(36).slice(2)}`;
+        assistantTempId = `temp-${crypto.randomUUID()}`;
         const tempId = assistantTempId;
         const tempMessage: MessageDto = {
           id: tempId,
@@ -152,140 +215,143 @@ export function useStreaming({
           updatedAt: Date.now(),
         };
 
-        // The messages query can finish its first server fetch while the stream is
-        // open; upserting keeps the optimistic bubble even if the cache is replaced.
         const upsertAssistant = (content: string) => {
           writeMessages(currentChatId, (current) => {
             const next = { ...tempMessage, content, updatedAt: Date.now() };
-            return current.some((m) => m.id === tempId)
-              ? current.map((m) => (m.id === tempId ? next : m))
+            return current.some((message) => message.id === tempId)
+              ? current.map((message) => (message.id === tempId ? next : message))
               : [...current, next];
           });
         };
-
-        const replaceTemp = (saved: MessageDto) => {
-          writeMessages(currentChatId, (current) =>
-            current.some((m) => m.id === tempId)
-              ? current.map((m) => (m.id === tempId ? saved : m))
-              : [...current, saved],
-          );
-        };
-
         upsertAssistant('');
 
         let buffer = '';
-
+        let streamError = '';
         const response = await fetch(apiUrl('/api/chat'), {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           credentials: 'include',
-          signal: controller.signal,
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(180_000)]),
           body: JSON.stringify({ providerId: provider.id, model: activeModel, messages: outgoing }),
         });
 
         if (!response.ok) {
-          let detail = `Connect issue (${response.status})`;
+          let detail = response.status === 401
+            ? 'Your session expired. Sign in again.'
+            : `The provider request failed (${response.status}).`;
           try {
-            const body = (await response.json()) as { error?: string };
-            if (body?.error) detail = body.error;
+            const errorBody = (await response.json()) as { error?: string };
+            if (errorBody?.error) detail = errorBody.error;
           } catch {
             // Keep the status-based message.
           }
           throw new Error(detail);
         }
+        if (!response.body) throw new Error('The provider returned no stream.');
 
-        const stream = response.body;
-        if (!stream) throw new Error('Readable stream not ready');
-
-        const reader = stream.getReader();
+        const reader = response.body.getReader();
         const textDecoder = new TextDecoder('utf-8');
         const sse = new SseDecoder();
-
         const applyEvents = (events: ReturnType<SseDecoder['push']>) => {
           for (const event of events) {
-            if (event.error) buffer += `\n\n*(Error while streaming: ${event.error})*`;
+            if (event.error) streamError = event.error;
             if (event.text) buffer += event.text;
           }
           upsertAssistant(buffer);
         };
 
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          applyEvents(sse.push(textDecoder.decode(value, { stream: true })));
+        try {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            applyEvents(sse.push(textDecoder.decode(value, { stream: true })));
+          }
+          applyEvents(sse.flush());
+        } finally {
+          reader.releaseLock();
         }
-        applyEvents(sse.flush());
 
-        const saved = await createMessage(currentChatId, {
-          role: 'assistant',
-          content: buffer,
-          model: activeModel,
-          isRegenerated: forceRegenerationIndex !== undefined,
-        });
-        replaceTemp(saved.message);
+        let saved: MessageDto;
+        if (temporary) {
+          saved = {
+            ...tempMessage,
+            id: `temporary-message-${crypto.randomUUID()}`,
+            content: buffer,
+            position: local.length,
+            isRegenerated: forceRegenerationIndex !== undefined,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+        } else {
+          const created = await createMessage(currentChatId, {
+            role: 'assistant',
+            content: buffer,
+            model: activeModel,
+            isRegenerated: forceRegenerationIndex !== undefined,
+          });
+          saved = created.message;
+        }
+        writeMessages(currentChatId, (current) =>
+          current.some((message) => message.id === tempId)
+            ? current.map((message) => (message.id === tempId ? saved : message))
+            : [...current, saved],
+        );
+        assistantTempId = null;
+
+        if (streamError) {
+          setSendError(streamError);
+        } else if (firstExchange && promptToSend) {
+          void generateTitle(promptToSend, provider.id, activeModel)
+            .then(({ title }) => {
+              if (temporary) onTemporaryTitle?.(currentChatId, title);
+              else void updateChat(currentChatId, { title, source: 'automatic' });
+            })
+            .catch(() => undefined);
+        }
       } catch (error) {
         const err = error as { name?: string; message?: string };
         const failedChatId = chatId;
         const tempId = assistantTempId;
-        if (!failedChatId || !tempId) {
-          if (err.name !== 'AbortError') console.error('Core chat thread crashed:', error);
-          return;
-        }
         if (err.name === 'AbortError') {
-          const partial = readMessages(failedChatId).find((m) => m.id === tempId)?.content ?? '';
-          if (partial) {
-            try {
-              const saved = await createMessage(failedChatId, { role: 'assistant', content: partial, model: activeModel });
-              writeMessages(failedChatId, (current) => current.map((m) => (m.id === tempId ? saved.message : m)));
-            } catch {
-              writeMessages(failedChatId, (current) => current.filter((m) => m.id !== tempId));
+          if (failedChatId && tempId) {
+            const partial = readMessages(failedChatId).find((message) => message.id === tempId)?.content ?? '';
+            if (partial && !temporary) {
+              try {
+                const saved = await createMessage(failedChatId, { role: 'assistant', content: partial, model: activeModel });
+                writeMessages(failedChatId, (current) => current.map((message) => (message.id === tempId ? saved.message : message)));
+              } catch {
+                writeMessages(failedChatId, (current) => current.filter((message) => message.id !== tempId));
+              }
+            } else if (partial && temporary) {
+              writeMessages(failedChatId, (current) => current.map((message) => (
+                message.id === tempId
+                  ? { ...message, id: `temporary-message-${crypto.randomUUID()}`, content: partial, createdAt: Date.now(), updatedAt: Date.now() }
+                  : message
+              )));
+            } else {
+              writeMessages(failedChatId, (current) => current.filter((message) => message.id !== tempId));
             }
-          } else {
-            writeMessages(failedChatId, (current) => current.filter((m) => m.id !== tempId));
           }
-          return;
-        }
-        console.error('Core chat thread crashed:', error);
-        const errorContent = `⚠️ **Routing Error:** ${err.message || 'The endpoint was unable to complete the instruction pack.'}`;
-        writeMessages(failedChatId, (current) => {
-          if (current.some((m) => m.id === tempId)) {
-            return current.map((m) => (m.id === tempId ? { ...m, content: errorContent, updatedAt: Date.now() } : m));
+        } else {
+          if (failedChatId && tempId) {
+            writeMessages(failedChatId, (current) => current.filter((message) => message.id !== tempId));
           }
-          return [
-            ...current,
-            {
-              id: tempId,
-              chatId: failedChatId,
-              role: 'assistant',
-              content: errorContent,
-              model: activeModel,
-              position: current.length,
-              isRegenerated: false,
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            },
-          ];
-        });
-        try {
-          const saved = await createMessage(failedChatId, { role: 'assistant', content: errorContent, model: activeModel });
-          writeMessages(failedChatId, (current) =>
-            current.some((m) => m.id === tempId)
-              ? current.map((m) => (m.id === tempId ? saved.message : m))
-              : [...current, saved.message],
-          );
-        } catch {
-          // Leave the local error bubble in place.
+          setSendError(err.message || 'The provider request failed.');
         }
       } finally {
         abortControllerRef.current = null;
+        streamingRef.current = false;
         setIsStreaming(false);
-        void queryClient.invalidateQueries({ queryKey: queryKeys.chats });
+        if (chatId && !temporary) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.chats });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.messages(chatId) });
+        }
       }
     },
     [
       activeChatId,
       activeModel,
-      isStreaming,
+      onTemporaryTitle,
       providerId,
       providers,
       queryClient,
@@ -295,5 +361,5 @@ export function useStreaming({
     ],
   );
 
-  return { isStreaming, handleSendMessage, handleStopStreaming };
+  return { isStreaming, sendError, setSendError, handleSendMessage, handleStopStreaming };
 }

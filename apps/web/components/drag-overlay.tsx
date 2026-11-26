@@ -46,7 +46,7 @@ export function DragOverlay({ isDragging, onFilesDrop, onDragLeaveWorkspace }: D
             Drop files to routing stream
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm leading-relaxed font-semibold">
-            Upload images, PDFs, word documents, or plain text packages instantly.
+            Upload images, PDFs, Markdown, JSON, CSV, or plain text files.
           </p>
         </div>
       </div>

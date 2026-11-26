@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { MessageSquare, Pin, X, Check, Trash2, Edit2 } from 'lucide-react';
-import { Chat } from '../lib/provider-types';
+import type { Chat } from '../lib/provider-types';
 
 interface SidebarChatItemProps {
   chat: Chat;
@@ -17,20 +17,36 @@ interface SidebarChatItemProps {
   onRenameValueChange: (val: string) => void;
   onTogglePin: (id: string) => void;
   onDeleteClick: (id: string) => void;
+  onSaveTemporary?: (id: string) => void;
+  savingTemporary?: boolean;
   formatTime: (ts: number) => string;
 }
 
 export function SidebarChatItem({
   chat, activeChatId, editingChatId, renameValue, isPinned,
   onSelect, onStartRename, onSaveRename, onCancelRename,
-  onRenameValueChange, onTogglePin, onDeleteClick, formatTime,
+  onRenameValueChange, onTogglePin, onDeleteClick, onSaveTemporary,
+  savingTemporary = false, formatTime,
 }: SidebarChatItemProps) {
   const isEditing = editingChatId === chat.id;
+  const temporary = chat.id.startsWith('temporary-');
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (isEditing) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect(chat.id);
+    }
+  };
 
   return (
     <div
       onClick={() => !isEditing && onSelect(chat.id)}
-      className={`group relative flex flex-col justify-between px-3 py-2.5 rounded-xl text-xs transition border border-transparent cursor-pointer select-none ${
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-current={activeChatId === chat.id ? 'true' : undefined}
+      className={`group relative flex flex-col justify-between px-3 py-2.5 rounded-xl text-xs transition border border-transparent cursor-pointer select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40 ${
         activeChatId === chat.id
           ? 'bg-zinc-100 dark:bg-zinc-900/70 text-zinc-950 dark:text-zinc-100 border-zinc-200/50 dark:border-zinc-800/60 font-semibold'
           : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-zinc-150/40 dark:hover:bg-zinc-900/10'
@@ -44,11 +60,23 @@ export function SidebarChatItem({
               autoFocus
               type="text"
               value={renameValue}
+              maxLength={80}
               onChange={(e) => onRenameValueChange(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  onSaveRename(chat.id);
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  onCancelRename();
+                }
+              }}
+              aria-label="Chat title"
               className="flex-1 bg-zinc-200/50 dark:bg-zinc-850 border border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 rounded px-1.5 py-0.5 text-xs text-zinc-900 dark:text-white font-medium"
             />
-            <button type="button" onClick={onCancelRename} className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Cancel"><X size={11} /></button>
-            <button type="button" onClick={() => onSaveRename(chat.id)} className="p-1 rounded text-zinc-400 hover:text-emerald-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Save"><Check size={11} /></button>
+            <button type="button" onClick={onCancelRename} className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Cancel" aria-label="Cancel rename"><X size={11} /></button>
+            <button type="button" onClick={() => onSaveRename(chat.id)} className="p-1 rounded text-zinc-400 hover:text-emerald-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Save" aria-label="Save rename"><Check size={11} /></button>
           </div>
         ) : (
           <span className="truncate flex-1 font-semibold text-zinc-800 dark:text-zinc-100">{chat.title}</span>
@@ -57,8 +85,9 @@ export function SidebarChatItem({
 
       {!isEditing && (
         <div className="flex items-center justify-between mt-1 text-[10px] text-zinc-400 dark:text-zinc-600 font-semibold">
-          <span>{formatTime(chat.updatedAt || chat.createdAt)}</span>
+          <span>{temporary ? 'Not saved' : formatTime(chat.updatedAt || chat.createdAt)}</span>
           <div className="flex items-center gap-1 text-[9px] font-bold">
+            {temporary && <span className="rounded bg-amber-500/10 px-1 py-0.5 font-mono text-amber-700 dark:text-amber-400">TEMP</span>}
             {isPinned && <Pin size={8} className="fill-current text-emerald-500 shrink-0" />}
           </div>
         </div>
@@ -66,9 +95,35 @@ export function SidebarChatItem({
 
       {!isEditing && (
         <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 flex items-center bg-white dark:bg-[#0d0d0d] rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xl py-0.5 px-1 gap-0.5 z-10">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onTogglePin(chat.id); }} className={`p-1 rounded ${isPinned ? 'text-emerald-500' : 'text-zinc-400'} hover:text-emerald-500 hover:bg-zinc-50 dark:hover:bg-zinc-900`} title={isPinned ? 'Unpin Thread' : 'Pin Thread'}><Pin size={10} className={isPinned ? 'fill-current' : ''} /></button>
-          <button type="button" onClick={(e) => onStartRename(chat, e)} className="p-1 rounded text-zinc-450 hover:text-emerald-500 hover:bg-zinc-50 dark:hover:bg-zinc-900" title="Rename Thread"><Edit2 size={10} /></button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteClick(chat.id); }} className="p-1 rounded text-zinc-450 hover:text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-900" title="Delete Thread"><Trash2 size={10} /></button>
+          {temporary ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onSaveTemporary?.(chat.id); }}
+                disabled={savingTemporary}
+                className="p-1 rounded text-zinc-450 hover:text-emerald-500 hover:bg-zinc-50 dark:hover:bg-zinc-900 disabled:opacity-40"
+                title="Save temporary chat"
+                aria-label="Save temporary chat"
+              >
+                <Check size={10} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDeleteClick(chat.id); }}
+                className="p-1 rounded text-zinc-450 hover:text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                title="Discard temporary chat"
+                aria-label="Discard temporary chat"
+              >
+                <Trash2 size={10} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onTogglePin(chat.id); }} className={`p-1 rounded ${isPinned ? 'text-emerald-500' : 'text-zinc-400'} hover:text-emerald-500 hover:bg-zinc-50 dark:hover:bg-zinc-900`} title={isPinned ? 'Unpin Thread' : 'Pin Thread'} aria-label={isPinned ? 'Unpin chat' : 'Pin chat'}><Pin size={10} className={isPinned ? 'fill-current' : ''} /></button>
+              <button type="button" onClick={(e) => onStartRename(chat, e)} className="p-1 rounded text-zinc-450 hover:text-emerald-500 hover:bg-zinc-50 dark:hover:bg-zinc-900" title="Rename Thread" aria-label="Rename chat"><Edit2 size={10} /></button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteClick(chat.id); }} className="p-1 rounded text-zinc-450 hover:text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-900" title="Move Thread to Trash" aria-label="Move chat to trash"><Trash2 size={10} /></button>
+            </>
+          )}
         </div>
       )}
     </div>

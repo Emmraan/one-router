@@ -29,16 +29,23 @@ function limit(value: string | undefined): number | undefined {
 export function messageRoutes(deps: { auth: ReturnType<typeof createAuth>; fileStore: ReturnType<typeof createFileStore> }) {
   const app = new Hono<AppEnv>();
   const repos = deps.auth.repos;
+  const withAttachments = async <T extends { id: string }>(owner: string, message: T) => {
+    const refs = await repos.attachments.listForMessage(owner, message.id);
+    const files = await Promise.all(refs.map((ref) => repos.attachments.get(owner, ref.id)));
+    return { ...message, attachments: files.flatMap((file) => file ? [{ id: file.id, name: file.name,
+      type: file.mimeType, size: file.size, url: `/api/files/${file.id}` }] : []) };
+  };
 
   app.get('/chats/:chatId/messages', async (c) => {
     const owner = c.get('ownerId');
     const chatId = c.req.param('chatId');
     if (!(await repos.chats.get(owner, chatId))) throw new HttpError(404, 'Chat not found', 'NOT_FOUND');
     try {
-      return c.json(await repos.messages.list(owner, chatId, {
+      const page = await repos.messages.list(owner, chatId, {
         limit: limit(c.req.query('limit')),
         cursor: c.req.query('cursor'),
-      }));
+      });
+      return c.json({ ...page, items: await Promise.all(page.items.map((item) => withAttachments(owner, item))) });
     } catch (error) {
       return repositoryFailure(error);
     }
@@ -48,7 +55,7 @@ export function messageRoutes(deps: { auth: ReturnType<typeof createAuth>; fileS
     const body = await readJson(c, appendSchema, 512 * 1024);
     try {
       const message = await repos.messages.append(c.get('ownerId'), c.req.param('chatId'), body);
-      return c.json({ message }, 201);
+      return c.json({ message: await withAttachments(c.get('ownerId'), message) }, 201);
     } catch (error) {
       return repositoryFailure(error);
     }
@@ -59,7 +66,7 @@ export function messageRoutes(deps: { auth: ReturnType<typeof createAuth>; fileS
     try {
       const message = await repos.messages.update(c.get('ownerId'), c.req.param('id'), body.content);
       if (!message) throw new HttpError(404, 'Message not found', 'NOT_FOUND');
-      return c.json({ message });
+      return c.json({ message: await withAttachments(c.get('ownerId'), message) });
     } catch (error) {
       return repositoryFailure(error);
     }

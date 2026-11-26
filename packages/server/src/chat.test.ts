@@ -173,7 +173,9 @@ describe('chat attachments', () => {
       }],
     }));
     expect(response.status).toBe(200);
-    expect(String(context.fetchCalls[0].init?.body)).toContain('[Attached File: notes.txt (0 KB)]');
+    expect(String(context.fetchCalls[0].init?.body)).toContain('[File: notes.txt]');
+    expect(String(context.fetchCalls[0].init?.body)).toContain('attachment body');
+    expect(String(context.fetchCalls[0].init?.body)).toContain('[End file]');
   });
 
   it('rejects missing and duplicate attachments', async () => {
@@ -259,16 +261,14 @@ describe('titles', () => {
 });
 
 describe('prompt enhancement', () => {
-  it('appends the guidance suffix without a key', async () => {
+  it('requires a provider instead of returning a fake rewrite', async () => {
     const response = await context.request('/api/enhance', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ prompt: 'make this better' }),
     });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      enhanced: 'make this better\n\n[Please clarify, provide step-by-step reasoning, and format with markdown formatting.]',
-    });
+    expect(response.status).toBe(400);
+    expect((await response.json()) as { code: string }).toMatchObject({ code: 'PROVIDER_REQUIRED' });
   });
 
   it('uses the Gemini provider when configured', async () => {
@@ -290,7 +290,7 @@ describe('prompt enhancement', () => {
     expect(await response.json()).toEqual({ enhanced: 'Better prompt' });
   });
 
-  it('falls back to the original prompt when the provider fails', async () => {
+  it('fails visibly when the provider fails', async () => {
     await recreate({
       fetch: async () => new Response('nope', { status: 500 }),
     });
@@ -299,8 +299,8 @@ describe('prompt enhancement', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ prompt: 'make this better', apiKey: 'gemini-key' }),
     });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ enhanced: 'make this better' });
+    expect(response.status).toBe(500);
+    expect((await response.json()) as { code: string }).toMatchObject({ code: 'ENHANCE_FAILED' });
   });
 
   it('rejects an empty prompt', async () => {
@@ -310,7 +310,7 @@ describe('prompt enhancement', () => {
       body: JSON.stringify({ prompt: '   ' }),
     });
     expect(response.status).toBe(400);
-    expect((await response.json()) as { code: string }).toMatchObject({ code: 'INVALID_REQUEST' });
+    expect((await response.json()) as { code: string }).toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 });
 

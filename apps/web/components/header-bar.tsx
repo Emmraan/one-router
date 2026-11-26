@@ -11,6 +11,7 @@ interface HeaderBarProps {
   activeProviderId: string;
   onSelectModelAndProvider: (providerId: string, model: string) => void;
   onLogout: () => void;
+  children?: React.ReactNode;
 }
 
 export function HeaderBar({
@@ -19,6 +20,7 @@ export function HeaderBar({
   activeProviderId,
   onSelectModelAndProvider,
   onLogout,
+  children,
 }: HeaderBarProps) {
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/50 bg-white dark:bg-[#0a0a0a]/90 backdrop-blur-md sticky top-0 z-50 transition-colors">
@@ -31,6 +33,7 @@ export function HeaderBar({
         />
       </div>
       <div className="flex items-center gap-3">
+        {children}
         <button
           type="button"
           onClick={onLogout}

@@ -7,6 +7,7 @@
 | 2 | merged | phase-2-db |
 | 3 | merged | phase-3-server |
 | 4 | merged | phase-4-web-cutover |
+| 5 | merged | phase-5-web-parity |
 
 ## Phase 0 - Workspace, gates, CI
 
@@ -77,4 +78,21 @@
 - Accepted: KaTeX and Mermaid still load pinned builds from jsdelivr without SRI; P6 localizes them. Static HTML carries frame, base, and form CSP only; the script CSP belongs to the CLI host in P8. The preview static server binds all interfaces, like Hono. Chat search stays client-side over at most 100 chats.
 - Deviation: temp chat, attachment upload, and AI titles move to P5; enhance is wired to the existing endpoint; new chats are titled from the first ten words; the active chat is not restored on reload.
 - Dependencies: `@playwright/test` and `tsx` for browser E2E, `@hono/node-server` to boot the fixture server. Browser E2E cannot be covered by Vitest.
+
+## Phase 5 - Web parity
+
+- Work commit: 0228f85; local `--no-ff` merge into `main`.
+- Uploads: picker, drag, and paste send files to `POST /api/files` with progress, per-file status, retry, and remove; the browser never sends base64 chat payloads, and the server hydrates declared attachment IDs by owner.
+- Enhancement runs through the selected provider and model with the same URL policy as chat; preview shows before and after with apply, discard, and undo. Titles are generated after the first exchange and fall back to the first words.
+- Temporary chats live in the React Query cache only, never the DB; save writes one atomic `POST /api/chats/save`, discard removes cache and files, and unsaved exit is guarded in-app plus a native unload warning.
+- Sidebar: server search over encrypted titles and message content, trash with restore and permanent delete, pin, and inline rename. Archive UI exports an encrypted `.onerouter` by default, previews before import, and offers merge or replace.
+- Legacy import reads the old `onerouter_*` localStorage keys, decrypts old provider keys with the old master key, previews counts, and clears only recognized keys on success when they are unchanged.
+- Server additions: bounded chat search, atomic temporary save, provider-backed title and enhance, `POST /api/data/legacy`, and PDF text extraction. Core enhance no longer appends a silent suffix; a missing provider returns 400 `PROVIDER_REQUIRED`.
+- Gate: lint, typecheck, test (557), build, budget (183.9/220 KB JS, 10.1/50 KB CSS), audit gate (0 high or critical; 3 moderate).
+- E2E: 4 Playwright tests against the static export and a real Hono fixture provider, covering bootstrap, a temporary chat that stays out of the DB until saved, image and PDF uploads with enhancement and archive roundtrip, and search, pin, and trash. The fixture server exposes a test-only stats route.
+- Deviation: the client accepts only supported image, PDF, JSON, text, Markdown, and CSV types; word-processor documents are rejected rather than forwarded. The landing counterpart exception is recorded in the P5 plan row.
+- Pen test: no critical or high findings. Search is bounded to 1000 chats and 10000 messages per request with a 200-character query; file hydration is owner-scoped; legacy and archive input is schema-validated; plaintext export omits provider keys; the temporary path performs no DB writes; PDF text is capped at 200000 characters.
+- Accepted: PDF parsing is CPU-bounded only by the 10 MiB upload cap; a temporary chat discarded mid-stream can re-add a cache entry until reload; DNS rebinding remains core's literal-only policy; 3 moderate dev advisories stay below the gate.
+- Dependency: `unpdf` 2.2.3 for PDF text. The Node stdlib cannot parse compressed PDF streams and provider parity requires extracting text.
+- CI: `ci.yml` already runs quality, integration, and e2e-local on `phase-*` pushes, so no scratch workflow was needed this phase.
 

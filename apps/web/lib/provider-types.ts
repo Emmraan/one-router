@@ -20,7 +20,10 @@ export interface Attachment {
   type: string;
   size: number;
   url: string;
-  base64?: string;
+  status?: 'uploading' | 'ready' | 'error';
+  progress?: number;
+  error?: string;
+  clientId?: string;
 }
 
 export interface Message {

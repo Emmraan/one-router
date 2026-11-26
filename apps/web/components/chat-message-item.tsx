@@ -122,7 +122,7 @@ export const ChatMessageItem = React.memo(function ChatMessageItem({
                 >
                   {att.type.startsWith('image/') ? (
                     <img 
-                      src={att.base64 ? `data:${att.type};base64,${att.base64}` : att.url} 
+                      src={att.url} 
                       alt={att.name} 
                       className="w-10 h-10 object-cover rounded-md shadow-xs animate-fade-in" 
                     />
