@@ -104,6 +104,7 @@ export interface GenerateGeminiTextOptions {
   prompt: string;
   model?: string;
   fetch?: FetchLike;
+  signal?: AbortSignal;
 }
 
 export async function generateGeminiText(
@@ -122,6 +123,7 @@ export async function generateGeminiText(
     body: JSON.stringify({
       contents: [{ parts: [{ text: options.prompt }] }],
     }),
+    signal: options.signal,
     redirect: 'manual',
   });
 

@@ -5,6 +5,7 @@ export interface GenerateTitleOptions {
   message: string;
   apiKey?: string;
   fetch?: FetchLike;
+  signal?: AbortSignal;
 }
 
 export function deriveTitle(message: string): string {
@@ -41,6 +42,7 @@ export async function generateTitle(
     const text = await generateGeminiText({
       apiKey: options.apiKey,
       fetch: options.fetch,
+      signal: options.signal,
       prompt: `Generate a short chat title of 3 to 6 words in the same language as the user message. Use only the title text, with no quotation marks, prefix, greeting, or punctuation.
 
 User Message: "${message}"`,

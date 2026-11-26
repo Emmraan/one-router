@@ -30,6 +30,10 @@ export function identityRepositories(store: Store) {
   return {
     users: {
       get: getUser,
+      async owner() {
+        const [row] = await store.orm.select({ id: users.id }).from(users).where(eq(users.role, 'owner')).limit(1);
+        return row ? getUser(row.id) : null;
+      },
       async updateProfile(id: string, profile: Record<string, unknown>) {
         const text = validateJson(profile, 16384);
         await store.orm.update(users).set({ profile: seal(store, id, 'users', id, 'profile', text), updatedAt: Date.now() }).where(eq(users.id, id));
