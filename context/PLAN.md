@@ -21,7 +21,7 @@
 - New heavy job: scratch `.github/workflows/scratch-phase-N.yml` (`workflow_dispatch` + `push`, path filters, cancel-in-progress) -> promote to `ci.yml` -> delete scratch before merge.
 - Phase 6+: any UI or product-copy change updates the landing preview/copy in the same change set.
 - No file >500 lines. No section-sign glyph. English UI/docs. Windows desktop look.
-- Do not push `main` unless the owner asks.
+- `main` stays local and is never pushed until the MVP is complete. Push only the phase or feature branch and run CI there.
 
 **Done:** red-first tests, changed gates, full gate, pen test, PROGRESS, landing counterpart, CI promoted, `--no-ff` merge.
 
