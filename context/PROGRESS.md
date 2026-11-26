@@ -4,6 +4,7 @@
 |---|---|---|
 | 0 | merged | phase-0-workspace |
 | 1 | merged | phase-1-core |
+| 2 | merged | phase-2-db |
 
 ## Phase 0 - Workspace, gates, CI
 
@@ -30,3 +31,15 @@
 - Pen test fixed: base URL errors no longer echo credentials; upstream stream lines are capped at 1 MiB and the reader is cancelled; adapter lookup rejects inherited keys; Anthropic discovery base duplication fixed.
 - Accepted: DNS rebinding through an owner-supplied public hostname remains possible because core validates literals only; resolver pinning belongs to the server phase. Routes remain unauthenticated until the auth phase. Upstream error bodies are capped at 8 KiB and returned for actionable failures.
 - No new runtime dependency; zod was already pinned in the workspace lockfile.
+
+## Phase 2 - DB package
+
+- Work commit: 6985049; local `--no-ff` merge into `main`.
+- Added `packages/db` with libSQL/Drizzle tables for users, sessions, providers, chats, messages, attachments, settings, and the migration ledger; composite owner foreign keys and a partial single-owner index.
+- AES-256-GCM per-value encryption and scrypt password hashing; master key from env or `~/.one-router/encryption.key` created atomically with 0600 permissions.
+- Repositories: owner-scoped CRUD, cursor pagination, decrypt-filter search, soft delete and restore, orphan cleanup, and owner seed bootstrap.
+- Archive: fixed-header encrypted format with checksum, strict schema, bounded export batches, tamper and wrong-passphrase rejection; merge and replace imports remap IDs; plaintext exports omit provider secrets and reject them on import.
+- Gate: lint, typecheck, test (344), build, budget (218.3/220 KB JS, 10.3/50 KB CSS), audit gate (0 high or critical; 3 moderate).
+- Security: export charges decoded JSON size and verifies attachment BLOB lengths; replace import returns external attachment objects for cleanup only after commit and keeps metadata on rollback; migrations verify checksums and history.
+- Accepted: Windows libSQL file handles need a test-only GC workaround before temp-directory removal; DNS rebinding and route authentication remain server-phase work; callers own external object deletion after import.
+- Dependencies: `@libsql/client` for local and remote transports, `drizzle-orm` and `drizzle-kit` for typed SQL and migrations; rationale and backup/restore steps are in `packages/db/README.md`.
