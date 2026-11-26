@@ -1,8 +1,12 @@
 node_modules/
 .next/
+out/
+dist/
+.turbo/
 coverage/
+.ci-logs/
 .DS_Store
 *.log
 .env*
 !.env.example
-tsconfig.tsbuildinfo
+*.tsbuildinfo
