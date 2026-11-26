@@ -59,7 +59,6 @@ export function SidebarChatItem({
         <div className="flex items-center justify-between mt-1 text-[10px] text-zinc-400 dark:text-zinc-600 font-semibold">
           <span>{formatTime(chat.updatedAt || chat.createdAt)}</span>
           <div className="flex items-center gap-1 text-[9px] font-bold">
-            {chat.isTemporary && <span className="px-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded uppercase tracking-wide">Temp</span>}
             {isPinned && <Pin size={8} className="fill-current text-emerald-500 shrink-0" />}
           </div>
         </div>

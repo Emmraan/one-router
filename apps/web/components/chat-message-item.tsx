@@ -1,10 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { 
+import {
   Copy, Check, Edit, Trash2, Quote, Download, RefreshCw
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { MarkdownRenderer } from './markdown-renderer';
 import { Message, Attachment } from '../lib/provider-types';
 

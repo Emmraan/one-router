@@ -6,22 +6,20 @@ import { Provider, ProviderType, PROVIDER_DEFAULTS } from '../../lib/provider-ty
 
 interface ProviderListProps {
   providers: Provider[];
-  onUpdateProviders: (providers: Provider[]) => void;
   onEdit: (provider: Provider) => void;
   onDiscover: (provider: Provider) => void;
   onDelete: (id: string) => void;
+  onSetActive: (provider: Provider) => void;
+  onAddPreset: (type: ProviderType) => void;
   discoveringId: string | null;
   discoveryError: string | null;
 }
 
 export function ProviderList({
-  providers, onUpdateProviders, onEdit, onDiscover, onDelete,
+  providers, onEdit, onDiscover, onDelete, onSetActive, onAddPreset,
   discoveringId, discoveryError,
 }: ProviderListProps) {
-  const toggleActive = (id: string) => {
-    const updated = providers.map((p) => ({ ...p, isActive: p.id === id }));
-    onUpdateProviders(updated);
-  };
+  const presetTypes = Object.keys(PROVIDER_DEFAULTS) as ProviderType[];
 
   return (
     <div className="space-y-4 animate-fade-in-up">
@@ -42,23 +40,11 @@ export function ProviderList({
             No custom endpoints active. Build a custom provider container, or run presets.
           </p>
           <div className="mt-4 flex flex-col gap-1.5 w-full max-w-[240px]">
-            {(Object.keys(PROVIDER_DEFAULTS) as ProviderType[]).map((type) => (
+            {presetTypes.map((type) => (
               <button
                 key={type}
                 type="button"
-                onClick={() => {
-                  const defaults = PROVIDER_DEFAULTS[type];
-                  const newP: Provider = {
-                    id: Math.random().toString(36).substring(7),
-                    name: defaults.name,
-                    type,
-                    baseUrl: defaults.baseUrl,
-                    apiKey: '',
-                    models: defaults.models,
-                    isActive: providers.length === 0,
-                  };
-                  onUpdateProviders([...providers, newP]);
-                }}
+                onClick={() => onAddPreset(type)}
                 className="text-[10px] font-bold text-left px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-150 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition"
               >
                 + Populate Preset {PROVIDER_DEFAULTS[type].name}
@@ -82,7 +68,7 @@ export function ProviderList({
                   <input
                     type="checkbox"
                     checked={prov.isActive}
-                    onChange={() => toggleActive(prov.id)}
+                    onChange={() => onSetActive(prov)}
                     className="rounded text-emerald-500 accent-emerald-500 focus:ring-0 w-4 h-4 cursor-pointer mt-1"
                     title="Set Active Engine Group"
                   />
@@ -90,6 +76,9 @@ export function ProviderList({
                     <p className="text-xs font-bold flex items-center flex-wrap gap-1.5">
                       <span>{prov.name}</span>
                       <span className="text-[8px] px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/80 text-zinc-500 font-mono uppercase font-bold">{prov.type}</span>
+                      {!prov.hasApiKey && prov.type !== 'ollama' && (
+                        <span className="text-[8px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono uppercase font-bold" title="No API key stored">No key</span>
+                      )}
                     </p>
                     <p className="text-[10px] text-zinc-400 font-mono mt-0.5 truncate max-w-[200px] md:max-w-[320px]">{prov.baseUrl}</p>
                   </div>
@@ -117,25 +106,13 @@ export function ProviderList({
         <div className="pt-4 border-t border-zinc-300/40 dark:border-zinc-700/30">
           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-2 font-mono">Add Presets</p>
           <div className="grid grid-cols-2 gap-2">
-            {(Object.keys(PROVIDER_DEFAULTS) as ProviderType[])
-              .filter(type => !providers.some(p => p.type === type))
+            {presetTypes
+              .filter((type) => !providers.some((p) => p.type === type))
               .map((type) => (
                 <button
                   key={type}
                   type="button"
-                  onClick={() => {
-                    const defaults = PROVIDER_DEFAULTS[type];
-                    const newP: Provider = {
-                      id: Math.random().toString(36).substring(7),
-                      name: defaults.name,
-                      type,
-                      baseUrl: defaults.baseUrl,
-                      apiKey: '',
-                      models: defaults.models,
-                      isActive: providers.length === 0,
-                    };
-                    onUpdateProviders([...providers, newP]);
-                  }}
+                  onClick={() => onAddPreset(type)}
                   className="text-[10px] font-bold text-left px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/60 border border-zinc-300/40 dark:border-zinc-700/30 transition flex items-center justify-between"
                 >
                   <span>{PROVIDER_DEFAULTS[type].name.split(' ')[0]}</span>

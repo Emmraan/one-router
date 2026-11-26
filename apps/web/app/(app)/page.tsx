@@ -2,27 +2,29 @@
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { RefreshCw, Image as ImageIcon, FileText } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Sidebar } from '../components/sidebar';
-import { ChatMessageItem } from '../components/chat-message-item';
-import { HeaderBar } from '../components/header-bar';
-import { InputDeck } from '../components/input-deck';
-import { GreetingView } from '../components/greeting-view';
-import { DragOverlay } from '../components/drag-overlay';
-import { FloatingSelectionToolbar } from '../components/floating-selection-toolbar';
-import { useChatState } from '../hooks/use-chat-state';
-import { useFileUpload } from '../hooks/use-file-upload';
-import { useStreaming } from '../hooks/use-streaming';
-import { useEnhance } from '../hooks/use-enhance';
-import { useChatEditing } from '../hooks/use-chat-editing';
-import { useTextSelection } from '../hooks/use-text-selection';
+import { Sidebar } from '../../components/sidebar';
+import { ChatMessageItem } from '../../components/chat-message-item';
+import { HeaderBar } from '../../components/header-bar';
+import { InputDeck } from '../../components/input-deck';
+import { GreetingView } from '../../components/greeting-view';
+import { DragOverlay } from '../../components/drag-overlay';
+import { FloatingSelectionToolbar } from '../../components/floating-selection-toolbar';
+import { useChatState } from '../../hooks/use-chat-state';
+import { useFileUpload } from '../../hooks/use-file-upload';
+import { useStreaming } from '../../hooks/use-streaming';
+import { useEnhance } from '../../hooks/use-enhance';
+import { useChatEditing } from '../../hooks/use-chat-editing';
+import { useTextSelection } from '../../hooks/use-text-selection';
+import { useLogout } from '../../hooks/use-auth';
 
 // The dashboard is opened from the sidebar; keeping it out of the initial route
 // leaves room for the NFR-15 JS budget.
 const ProviderDashboard = dynamic(
   () =>
-    import('../components/provider-dashboard').then(
+    import('../../components/provider-dashboard').then(
       (module) => module.ProviderDashboard,
     ),
   { ssr: false },
@@ -38,12 +40,13 @@ function getFileIcon(fileName: string, mimeType: string) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const logoutMutation = useLogout();
   const {
     sidebarOpen, setSidebarOpen, dashboardOpen, setDashboardOpen,
-    theme, providers, setProviders, chats, setChats,
-    activeChatId, setActiveChatId, selectedModel,
-    isTempMode, setIsTempMode, mounted,
-    toggleTheme, handleUpdateProviders, createNewChat,
+    theme, providers, chats, messages,
+    activeChatId, setActiveChatId, activeChat, activeModel, activeProviderId,
+    mounted, toggleTheme, createNewChat,
     deleteChat, renameChat, togglePinChat, selectModelAndProvider,
   } = useChatState();
 
@@ -65,8 +68,11 @@ export default function HomePage() {
   const {
     isStreaming, handleSendMessage: streamSend, handleStopStreaming,
   } = useStreaming({
-    providers, chats, setChats, activeChatId, setActiveChatId,
-    selectedModel, isTempMode, setIsTempMode, renameChat,
+    activeChatId,
+    setActiveChatId,
+    providers,
+    activeModel,
+    providerId: activeProviderId,
   });
 
   const sendMessage = React.useCallback(
@@ -80,7 +86,7 @@ export default function HomePage() {
     editingMessageId, editingMessageText, setEditingMessageText,
     handleEditMessage, saveEditedMessage, cancelEditMessage,
     deleteMessage, exportMessageToMarkdown,
-  } = useChatEditing(activeChatId, setChats, sendMessage, isStreaming);
+  } = useChatEditing({ activeChatId, messages, sendMessage });
 
   const {
     selectedText, selectionPosition, copiedSelection,
@@ -112,40 +118,21 @@ export default function HomePage() {
     setInputText(`Regarding:\n\n"${selectedText}"\n\nCan you explain this?`);
   };
 
-  const handleToggleTempMode = () => {
-    if (isTempMode) {
-      if (activeChatId) {
-        setChats((prev) => {
-          const filtered = prev.filter((c) => c.id !== activeChatId);
-          return filtered;
-        });
-        setActiveChatId((prev) => {
-          const remaining = chats.filter((c) => c.id !== prev);
-          return remaining.length > 0 ? remaining[0].id : null;
-        });
-      }
-      setIsTempMode(false);
-    } else {
-      createNewChat(true);
-    }
-  };
-
   const handlePresetPrompt = (text: string) => {
     setInputText(text);
   };
 
-  const activeChat = chats.find((c) => c.id === activeChatId);
-  const activeProvider = providers.find((p: any) => p.isActive) || providers[0];
-  const activeModel = activeChat ? activeChat.model : (selectedModel?.model || activeProvider?.models?.[0] || '');
+  const activeChatMessages = activeChat ? activeChat.messages : messages;
+  const activeProvider = providers.find((p) => p.id === activeProviderId) ?? providers[0];
+
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtualizer({
-    count: activeChat ? activeChat.messages.length : 0,
+    count: activeChatMessages.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => 100,
     overscan: 10,
   });
-
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (scrollContainerRef.current) {
@@ -154,7 +141,7 @@ export default function HomePage() {
         behavior: 'smooth',
       });
     }
-  }, [activeChat?.messages?.length, isStreaming]);
+  }, [activeChatMessages.length, isStreaming]);
 
   const renderInputDeck = () => (
     <InputDeck
@@ -207,7 +194,6 @@ export default function HomePage() {
         onOpenDashboard={() => setDashboardOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
-        isTempMode={isTempMode}
         onTogglePin={togglePinChat}
       />
 
@@ -226,12 +212,14 @@ export default function HomePage() {
           activeModel={activeModel}
           activeProviderId={activeProvider?.id || ''}
           onSelectModelAndProvider={selectModelAndProvider}
-          isTempMode={isTempMode}
-          onToggleTempMode={handleToggleTempMode}
+          onLogout={() => {
+            logoutMutation.mutate();
+            router.replace('/login');
+          }}
         />
 
         <div className="flex-1 overflow-hidden relative flex flex-col bg-zinc-50/50 dark:bg-[#0a0a0a]">
-          {activeChat && activeChat.messages.length > 0 ? (
+          {activeChatMessages.length > 0 ? (
             <div className="flex-1 flex flex-col overflow-hidden relative">
               <div
                 ref={scrollContainerRef}
@@ -246,10 +234,10 @@ export default function HomePage() {
                     }}
                   >
                     {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                      const message = activeChat.messages[virtualItem.index];
+                      const message = activeChatMessages[virtualItem.index];
                       if (!message) return null;
                       const isEditingThis = editingMessageId === message.id;
-                      const isLastBlock = virtualItem.index === activeChat.messages.length - 1;
+                      const isLastBlock = virtualItem.index === activeChatMessages.length - 1;
 
                       return (
                         <ChatMessageItem
@@ -309,7 +297,6 @@ export default function HomePage() {
           isOpen={dashboardOpen}
           onClose={() => setDashboardOpen(false)}
           providers={providers}
-          onUpdateProviders={handleUpdateProviders}
         />
       </div>
     </div>

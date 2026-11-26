@@ -20,13 +20,10 @@ function writeFile(root: string, file: string, content = 'x') {
 
 function writeHealthyBuild(root: string) {
   writeFile(root, '.next/BUILD_ID', 'test-build');
-  writeFile(
-    root,
-    '.next/server/app-paths-manifest.json',
-    JSON.stringify({ '/page': 'app/page.js' }),
-  );
-  writeFile(root, '.next/server/app/page.js');
-  writeFile(root, '.next/standalone/apps/web/server.js');
+  writeFile(root, 'out/index.html', '<!doctype html><script src="/_next/static/chunks/a.js"></script>');
+  writeFile(root, 'out/login/index.html', '<!doctype html>');
+  writeFile(root, 'out/change-password/index.html', '<!doctype html>');
+  writeFile(root, 'out/_next/static/chunks/a.js');
 }
 
 afterEach(() => {
@@ -36,7 +33,7 @@ afterEach(() => {
 });
 
 describe('checkBuildOutput', () => {
-  it('passes a healthy standalone build', () => {
+  it('passes a healthy static export', () => {
     const root = makeApp();
     writeHealthyBuild(root);
 
@@ -59,38 +56,59 @@ describe('checkBuildOutput', () => {
     });
   });
 
-  it('fails when the page route is missing from the manifest', () => {
+  it('fails when the export index is missing', () => {
     const root = makeApp();
     writeHealthyBuild(root);
-    writeFile(root, '.next/server/app-paths-manifest.json', JSON.stringify({}));
+    rmSync(path.join(root, 'out/index.html'));
 
     const result = checkBuildOutput(root);
 
     expect(result.ok).toBe(false);
-    expect(result.checks.find((check) => check.name === 'page-route')).toMatchObject({
+    expect(result.checks.find((check) => check.name === 'export-index')).toMatchObject({
       ok: false,
     });
   });
 
-  it('accepts the webpack app-build-manifest fallback', () => {
+  it('fails when an auth route is missing', () => {
     const root = makeApp();
     writeHealthyBuild(root);
-    writeFile(root, '.next/server/app-paths-manifest.json', JSON.stringify({}));
-    writeFile(
-      root,
-      '.next/app-build-manifest.json',
-      JSON.stringify({ pages: { '/page': ['static/chunks/a.js'] } }),
-    );
+    rmSync(path.join(root, 'out/login/index.html'));
+    rmSync(path.join(root, 'out/change-password/index.html'));
 
-    expect(checkBuildOutput(root).ok).toBe(true);
+    const result = checkBuildOutput(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((check) => check.name === 'export-login')).toMatchObject({
+      ok: false,
+    });
+    expect(result.checks.find((check) => check.name === 'export-change-password')).toMatchObject({
+      ok: false,
+    });
   });
 
-  it('accepts the non-monorepo standalone entrypoint', () => {
+  it('fails when the asset directory is missing', () => {
     const root = makeApp();
     writeHealthyBuild(root);
-    rmSync(path.join(root, '.next/standalone/apps'), { recursive: true, force: true });
-    writeFile(root, '.next/standalone/server.js');
+    rmSync(path.join(root, 'out/_next'), { recursive: true, force: true });
 
-    expect(checkBuildOutput(root).ok).toBe(true);
+    const result = checkBuildOutput(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((check) => check.name === 'export-assets')).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it('fails when the index has no client script', () => {
+    const root = makeApp();
+    writeHealthyBuild(root);
+    writeFile(root, 'out/index.html', '<!doctype html><p>static</p>');
+
+    const result = checkBuildOutput(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((check) => check.name === 'index-scripts')).toMatchObject({
+      ok: false,
+    });
   });
 });

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { MathRenderer, MermaidRenderer } from './markdown-math';
 import { CodeBlock } from './markdown-code-block';
+import { safeLinkHref } from '../lib/markdown';
 
 interface MarkdownRendererProps {
   content: string;
@@ -70,7 +71,7 @@ export function MarkdownRenderer({ content, onTextSelect, isStreaming }: Markdow
     clean = clean.replace(/\*(.*?)\*/g, '<em>$1</em>');
     clean = clean.replace(/_(.*?)_/g, '<em>$1</em>');
     clean = clean.replace(/`(.*?)`/g, '<code class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-mono text-[12px] text-rose-600 dark:text-rose-450">$1</code>');
-    clean = clean.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-emerald-400 hover:underline font-bold">$1</a>');
+    clean = clean.replace(/\[(.*?)\]\((.*?)\)/g, (_match, label: string, url: string) => `<a href="${safeLinkHref(url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-emerald-400 hover:underline font-bold">${label}</a>`);
 
     return <span dangerouslySetInnerHTML={{ __html: clean }} className="select-text" />;
   };

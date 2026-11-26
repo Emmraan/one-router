@@ -1,14 +1,17 @@
 export type ProviderType = 'openai' | 'anthropic' | 'gemini' | 'ollama';
 
+// Public provider shape returned by the server. The API key never leaves the
+// server; presence is signalled by `hasApiKey`.
 export interface Provider {
   id: string;
   name: string;
   type: ProviderType;
   baseUrl: string;
-  apiKey?: string; // Stored encrypted
   models: string[];
-  customHeaders?: string;
   isActive: boolean;
+  hasApiKey: boolean;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface Attachment {
@@ -16,13 +19,13 @@ export interface Attachment {
   name: string;
   type: string;
   size: number;
-  url: string; // for UI display blob
-  base64?: string; // base64 representation of file
+  url: string;
+  base64?: string;
 }
 
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
   attachments?: Attachment[];
@@ -35,33 +38,38 @@ export interface Chat {
   title: string;
   createdAt: number;
   updatedAt: number;
-  providerId: string; // Active provider when chatting
-  model: string;      // Active model when chatting
+  providerId: string | null;
+  model: string;
   messages: Message[];
-  isTemporary?: boolean;
   isPinned?: boolean;
-  committed?: boolean;
+  manualTitle?: boolean;
 }
 
-export const PROVIDER_DEFAULTS: Record<ProviderType, { name: string; baseUrl: string; models: string[] }> = {
+export interface ProviderDefaults {
+  name: string;
+  baseUrl: string;
+  models: string[];
+}
+
+export const PROVIDER_DEFAULTS: Record<ProviderType, ProviderDefaults> = {
   openai: {
-    name: 'OpenAI Compatible',
+    name: 'OpenAI Direct',
     baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-4o', 'gpt-4o-mini', 'o1-mini', 'o3-mini'],
+    models: ['gpt-4o', 'gpt-4o-mini', 'o1-mini'],
   },
   anthropic: {
-    name: 'Anthropic Compatible',
-    baseUrl: 'https://api.anthropic.com/v1',
+    name: 'Anthropic Direct',
+    baseUrl: 'https://api.anthropic.com',
     models: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest'],
   },
   gemini: {
-    name: 'Gemini (Direct AI Studio)',
+    name: 'Gemini AI Studio',
     baseUrl: 'https://generativelanguage.googleapis.com',
-    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-exp', 'gemini-1.5-flash'],
+    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash'],
   },
   ollama: {
-    name: 'Ollama (Local)',
+    name: 'Ollama local',
     baseUrl: 'http://localhost:11434',
-    models: ['llama3', 'mistral', 'gemma', 'phi3'],
+    models: ['llama3', 'mistral', 'gemma'],
   },
 };

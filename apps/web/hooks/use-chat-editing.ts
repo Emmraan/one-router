@@ -1,83 +1,75 @@
 'use client';
 
 import * as React from 'react';
-import type { Chat } from '../lib/provider-types';
+import { useQueryClient } from '@tanstack/react-query';
+import { deleteMessage as deleteMessageRequest, updateMessage as updateMessageRequest } from '../lib/api';
+import { queryKeys } from '../lib/query';
+import type { MessageDto } from '../lib/api-types';
+import type { Message } from '../lib/provider-types';
 
-function exportMessageToMarkdown(messageContent: string, messageId: string) {
-  try {
-    const blob = new Blob([messageContent], { type: 'text/markdown;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `assistant_message_${messageId}.md`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (e) {
-    console.error('Failed to export message', e);
-  }
+export function exportMessageToMarkdown(content: string, id: string) {
+  const blob = new Blob([content], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `assistant_message_${id}.md`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
-export function useChatEditing(
-  activeChatId: string | null,
-  setChats: React.Dispatch<React.SetStateAction<Chat[]>>,
-  handleSendMessage: (text: string, forceRegen?: number, editIndex?: number) => void,
-  isStreaming: boolean,
-) {
+interface UseChatEditingDeps {
+  activeChatId: string | null;
+  messages: Message[];
+  sendMessage: (customPrompt?: string, forceRegen?: number, editIndex?: number) => void;
+}
+
+export function useChatEditing({ activeChatId, messages, sendMessage }: UseChatEditingDeps) {
+  const queryClient = useQueryClient();
   const [editingMessageId, setEditingMessageId] = React.useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = React.useState('');
 
-  const handleEditMessage = (msgId: string, text: string) => {
-    setEditingMessageId(msgId);
-    setEditingMessageText(text);
-  };
-
-  const saveEditedMessage = (msgIndex: number, isUserMsg: boolean) => {
-    if (!editingMessageText.trim() || isStreaming) return;
-    setEditingMessageId(null);
-
-    if (isUserMsg) {
-      handleSendMessage(editingMessageText, undefined, msgIndex);
-    } else {
-      setChats((prev) => {
-        const updated = prev.map((c) => {
-          if (c.id === activeChatId) {
-            const messagesCopy = [...c.messages];
-            if (messagesCopy[msgIndex]) {
-              messagesCopy[msgIndex] = {
-                ...messagesCopy[msgIndex],
-                content: editingMessageText,
-              };
-            }
-            return { ...c, messages: messagesCopy, updatedAt: Date.now() };
-          }
-          return c;
-        });
-        localStorage.setItem('onerouter_chats', JSON.stringify(updated.filter(c => c.committed !== false)));
-        return updated;
-      });
-    }
+  const handleEditMessage = (id: string, content: string) => {
+    setEditingMessageId(id);
+    setEditingMessageText(content);
   };
 
   const cancelEditMessage = () => {
     setEditingMessageId(null);
+    setEditingMessageText('');
   };
 
-  const deleteMessage = (msgId: string) => {
-    setChats((prev) => {
-      const updated = prev.map((c) => {
-        if (c.id === activeChatId) {
-          return {
-            ...c,
-            messages: c.messages.filter((m) => m.id !== msgId),
-            updatedAt: Date.now(),
-          };
-        }
-        return c;
-      });
-      localStorage.setItem('onerouter_chats', JSON.stringify(updated.filter(c => c.committed !== false)));
-      return updated;
-    });
+  const saveEditedMessage = async (index: number, isUserMsg: boolean) => {
+    const message = messages[index];
+    if (!message || !activeChatId) return;
+    if (isUserMsg) {
+      cancelEditMessage();
+      sendMessage(editingMessageText, undefined, index);
+      return;
+    }
+    const content = editingMessageText;
+    const chatId = activeChatId;
+    queryClient.setQueryData<MessageDto[]>(queryKeys.messages(chatId), (old) =>
+      (old ?? []).map((m) => (m.id === message.id ? { ...m, content, updatedAt: Date.now() } : m)),
+    );
+    cancelEditMessage();
+    try {
+      await updateMessageRequest(message.id, content);
+    } catch {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages(chatId) });
+    }
+  };
+
+  const deleteMessage = async (id: string) => {
+    if (!activeChatId) return;
+    const chatId = activeChatId;
+    queryClient.setQueryData<MessageDto[]>(queryKeys.messages(chatId), (old) =>
+      (old ?? []).filter((m) => m.id !== id),
+    );
+    try {
+      await deleteMessageRequest(id);
+    } catch {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages(chatId) });
+    }
   };
 
   return {

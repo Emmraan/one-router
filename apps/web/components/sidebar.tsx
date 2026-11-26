@@ -5,9 +5,7 @@ import {
   MessageSquare, Plus, Trash2, Edit2, Settings, Moon, Sun,
   X, Check, ChevronLeft, ChevronRight, Pin, Search, PanelLeftOpen,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Chat } from '../lib/provider-types';
-import { ConfirmModal } from './confirm-modal';
+import { Chat } from '../lib/provider-types';import { ConfirmModal } from './confirm-modal';
 import { SidebarChatItem } from './sidebar-chat-item';
 
 interface SidebarProps {
@@ -22,7 +20,6 @@ interface SidebarProps {
   onOpenDashboard: () => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
-  isTempMode: boolean;
   onTogglePin: (id: string) => void;
 }
 
@@ -44,7 +41,7 @@ function formatLastUpdated(timestamp: number): string {
 export function Sidebar({
   isOpen, onToggle, chats, activeChatId, onSelectChat, onNewChat,
   onDeleteChat, onRenameChat, onOpenDashboard, theme, onToggleTheme,
-  isTempMode, onTogglePin,
+  onTogglePin,
 }: SidebarProps) {
   const [editingChatId, setEditingChatId] = React.useState<string | null>(null);
   const [renameValue, setRenameValue] = React.useState('');
@@ -78,7 +75,6 @@ export function Sidebar({
   };
 
   const filteredChats = chats.filter((chat) => {
-    if (!chat.isTemporary && !chat.committed) return false;
     const q = searchQuery.toLowerCase();
     if (chat.title.toLowerCase().includes(q)) return true;
     return chat.messages?.some((m) => m.content?.toLowerCase().includes(q));
@@ -89,20 +85,14 @@ export function Sidebar({
 
   return (
     <>
-      <AnimatePresence>
-        {isMobile && isOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.25 }} exit={{ opacity: 0 }} onClick={onToggle} className="fixed inset-0 z-40 bg-zinc-950 backdrop-blur-xs md:hidden" id="mobile-drawer-overlay" />
-        )}
-      </AnimatePresence>
+      {isMobile && isOpen && (
+        <div onClick={onToggle} className="fixed inset-0 z-40 bg-zinc-950/25 backdrop-blur-xs md:hidden animate-fade-in" id="mobile-drawer-overlay" />
+      )}
 
-      <motion.div
-        initial={false}
-        animate={isOpen ? 'open' : 'collapsed'}
-        variants={{
-          open: { width: 288, x: 0, transition: { type: 'spring' as const, stiffness: 260, damping: 28 } },
-          collapsed: { width: isMobile ? 0 : 68, x: isMobile ? -288 : 0, transition: { type: 'spring' as const, stiffness: 260, damping: 28 } },
-        }}
-        className={`fixed md:relative top-0 left-0 h-full z-45 flex flex-col bg-white dark:bg-[#0d0d0d] border-r border-zinc-200 dark:border-zinc-800/60 text-gray-900 dark:text-zinc-300 overflow-hidden shadow-2xl md:shadow-none select-none`}
+      <div
+        className={`fixed md:relative top-0 left-0 h-full z-45 flex flex-col bg-white dark:bg-[#0d0d0d] border-r border-zinc-200 dark:border-zinc-800/60 text-gray-900 dark:text-zinc-300 overflow-hidden shadow-2xl md:shadow-none select-none transition-[width,transform] duration-200 ease-out ${
+          isOpen ? 'w-72 translate-x-0' : isMobile ? 'w-0 -translate-x-72' : 'w-[68px] translate-x-0'
+        }`}
         id="onerouter-sidebar-shell"
       >
         {isOpen ? (
@@ -195,7 +185,7 @@ export function Sidebar({
             </div>
           </div>
         )}
-      </motion.div>
+      </div>
 
       <ConfirmModal
         isOpen={deleteConfirmId !== null}

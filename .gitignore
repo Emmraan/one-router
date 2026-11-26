@@ -5,6 +5,9 @@ dist/
 .turbo/
 coverage/
 .ci-logs/
+test-results/
+playwright-report/
+blob-report/
 .DS_Store
 *.log
 .env*
