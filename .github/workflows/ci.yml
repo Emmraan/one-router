@@ -1,32 +1,32 @@
-name: Scratch Phase 0
+name: CI
 
 on:
-  workflow_dispatch:
   push:
-    paths:
-      - 'apps/**'
-      - 'scripts/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'turbo.json'
-      - 'tsconfig*.json'
-      - 'eslint.config.mjs'
-      - 'vitest.config.ts'
-      - '.github/workflows/scratch-phase-0.yml'
+    branches:
+      - main
+      - 'phase-*'
+      - 'feat-*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: scratch-phase-0-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   quality:
-    name: Quality (Node 24)
+    name: Quality (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24, 26]
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +36,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
           cache: pnpm
 
       - name: Install
@@ -64,6 +64,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-logs-node-24
+          name: ci-logs-node-${{ matrix.node }}
           path: .ci-logs
           if-no-files-found: ignore
