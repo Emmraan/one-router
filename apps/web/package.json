@@ -11,6 +11,7 @@
     "clean": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\""
   },
   "dependencies": {
+    "@one-router/core": "workspace:*",
     "@tanstack/react-query": "5.108.4",
     "@tanstack/react-virtual": "3.14.2",
     "class-variance-authority": "0.7.1",

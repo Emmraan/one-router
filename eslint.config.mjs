@@ -22,7 +22,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['scripts/**/*.ts', 'vitest.config.ts'],
+    files: ['scripts/**/*.ts', 'vitest.config.ts', 'packages/**/*.ts'],
     extends: [...tseslint.configs.recommended],
     rules: {
       '@typescript-eslint/no-unused-vars': [

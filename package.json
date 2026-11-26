@@ -13,7 +13,7 @@
     "start": "pnpm --filter @one-router/web start",
     "lint": "eslint .",
     "lint:changed": "node scripts/changed.mjs lint",
-    "typecheck": "turbo run typecheck --filter=@one-router/web && tsc -p tsconfig.json --noEmit",
+    "typecheck": "turbo run typecheck && tsc -p tsconfig.json --noEmit",
     "typecheck:changed": "node scripts/changed.mjs typecheck",
     "test": "vitest run",
     "test:changed": "node scripts/changed.mjs test",
