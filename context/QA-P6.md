@@ -51,6 +51,8 @@ again without updating baselines. GitHub CI runs 46033417153 and 46033417155 pas
 on work commit `a8f0e26`: Node 24/26 quality, real-DB integration, feature E2E,
 client budgets, and Windows visual checks. The validated budget and visual jobs
 are promoted into `ci.yml`; the scratch workflow is removed before merge.
+Consolidated CI run 46034187695 also passes on promotion commit `c6910c0`, including
+the promoted Windows visual and client-budget jobs.
 
 ## Adversarial review
 

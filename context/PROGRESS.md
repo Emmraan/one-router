@@ -8,7 +8,7 @@
 | 3 | merged | phase-3-server |
 | 4 | merged | phase-4-web-cutover |
 | 5 | merged | phase-5-web-parity |
-| 6 | verified, ready to merge | phase-6-redesign |
+| 6 | merged | phase-6-redesign |
 
 ## Phase 0 - Workspace, gates, CI
 
@@ -97,10 +97,10 @@
 
 ## Phase 6 - Redesign
 
-- Work commit: a8f0e26; verified, local merge pending.
+- Work commit: a8f0e26; CI promotion: c6910c0; local `--no-ff` merge into `main`.
 - Gate: lint (zero errors, three known warnings), workspace types, 611 tests, both static builds and smoke, budget (184.4/220 KB JS, 6.9/50 KB CSS), audit (zero high or critical; one moderate development advisory).
 - Browser gate: 27 visual/behavior tests at 1440/1024/768, 5 feature-parity E2E tests, and manual review of 36 baselines, forced password change, and generated icons. Local reruns pass without snapshot updates.
-- CI: runs 46033417153 and 46033417155 pass Node 24/26 quality, real-DB integration, E2E, client budgets, and Windows visuals. Validated jobs promoted to `ci.yml`; scratch removed. Only the phase branch is pushed; `main` remains local.
+- CI: runs 46033417153/46033417155 and consolidated run 46034187695 pass Node 24/26 quality, real-DB integration, E2E, client budgets, and Windows visuals. Jobs promoted to `ci.yml`; scratch removed. Only the phase branch is pushed; `main` remains local.
 - Deviation: P6 creates the static landing scaffold and interactive sample workspace; installation docs, Fumadocs, and full site SEO remain P9 scope.
 - Pen test fixed: quadratic unfinished links, unbounded list/table/rich previews, escaped diagram paint URLs, dialog focus, clipped provider actions, and tab-separated heading levels. Reproductions and results: `context/QA-P6.md`.
 - Accepted bounds: 1,000 preview units, 40 table columns, 20 rich blocks/equations, and 100 visible model results; refine search or copy/export full text. Complex diagram directives, sources, and escaped labels fall back to source.
