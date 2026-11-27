@@ -22,6 +22,10 @@ export function useTheme() {
       applyTheme(theme);
       writeThemeCookie(theme);
     }
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const update = () => { if (settings.data && theme === 'system') applyTheme(theme); };
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
   }, [settings.data, theme]);
 
   const mutation = useMutation({
@@ -48,5 +52,5 @@ export function useTheme() {
     mutation.mutate(theme === 'dark' ? 'light' : 'dark');
   }, [mutation, theme]);
 
-  return { theme, toggleTheme };
+  return { theme, toggleTheme, setTheme: mutation.mutate, themeError: mutation.error, savingTheme: mutation.isPending };
 }

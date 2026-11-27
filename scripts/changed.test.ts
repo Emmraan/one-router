@@ -5,6 +5,7 @@ describe('mapChangedFiles', () => {
   it.each([
     [['apps/web/app/page.tsx'], ['web']],
     [['apps/web/package.json'], ['web']],
+    [['apps/site/app/page.tsx'], ['site']],
     [['scripts/budget.mjs'], ['root']],
     [['package.json'], ['root']],
     [['pnpm-lock.yaml'], ['root']],

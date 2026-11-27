@@ -5,7 +5,7 @@ const NEW_PASSWORD = 'one-router-e2e-password';
 
 // One serial scenario keeps the real server state linear: bootstrap, forced
 // password change, a real streamed send, reload, logout, and the 401 gate.
-test('owner bootstrap through logout on the static export', async ({ page }) => {
+test('owner bootstrap through logout on the static export', async ({ page }, testInfo) => {
   await test.step('anonymous status and login gate', async () => {
     const status = await page.request.get('/api/auth/status');
     expect(status.status()).toBe(200);
@@ -28,6 +28,8 @@ test('owner bootstrap through logout on the static export', async ({ page }) => 
     await page.locator('#login-password').fill(INITIAL_PASSWORD);
     await page.locator('#login-submit').click();
     await expect(page).toHaveURL(/\/change-password\/?$/);
+    await expect(page.locator('#change-current-password')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('forced-password-change.png') });
 
     await page.locator('#change-current-password').fill(INITIAL_PASSWORD);
     await page.locator('#change-new-password').fill(NEW_PASSWORD);
@@ -53,7 +55,7 @@ test('owner bootstrap through logout on the static export', async ({ page }) => 
     expect(created.status()).toBe(201);
 
     await page.reload();
-    const composer = page.getByPlaceholder(/Send a package/);
+    const composer = page.getByLabel('Message', { exact: true });
     await expect(composer).toHaveAttribute('placeholder', /fixture-model/);
 
     await composer.fill('ping');

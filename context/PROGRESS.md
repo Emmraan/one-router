@@ -8,13 +8,12 @@
 | 3 | merged | phase-3-server |
 | 4 | merged | phase-4-web-cutover |
 | 5 | merged | phase-5-web-parity |
+| 6 | merged | phase-6-redesign |
 
 ## Phase 0 - Workspace, gates, CI
 
 - Work commits: 9984377 (workspace and gates), bf9c665 (CI), merged as a7d5285.
-- Moved `app/`, `components/`, `hooks/`, `lib/`, Next, PostCSS, and TypeScript config into `apps/web`.
-- Added the pnpm workspace, Turbo, shared `tsconfig.base.json`, flat ESLint, Vitest, `.nvmrc` 24, `.releaserc.json`, and root scripts.
-- Added `scripts/changed.mjs`, `scripts/budget.mjs`, `scripts/audit-gate.mjs`, `scripts/build-smoke.mjs`, and `scripts/ci-run.mjs` with unit coverage.
+- Workspace and gate foundation: pnpm/Turbo, `apps/web`, shared TypeScript/ESLint/Vitest, changed-file scripts, build smoke, budgets, audit severity gate, and CI logs.
 - Gate: lint, typecheck, test (47), build, budget (218.3/220 KB JS, 10.3/50 KB CSS), audit gate (0 high or critical). `next start` served the page from `apps/web`.
 - Deviation: Next 16 Turbopack emits `server/app-paths-manifest.json` and prerendered HTML instead of `app-build-manifest.json`. The budget reads the route HTML, ignores legacy `noModule` polyfills, and keeps the manifest as a webpack fallback.
 - Deviation: the provider dashboard is dynamically imported so the initial route stays under NFR-15. The Next 15 `transpilePackages: ['motion']` entry was removed because Next 16 resolves the package natively.
@@ -95,4 +94,16 @@
 - Accepted: PDF parsing is CPU-bounded only by the 10 MiB upload cap; a temporary chat discarded mid-stream can re-add a cache entry until reload; DNS rebinding remains core's literal-only policy; 3 moderate dev advisories stay below the gate.
 - Dependency: `unpdf` 2.2.3 for PDF text. The Node stdlib cannot parse compressed PDF streams and provider parity requires extracting text.
 - CI: `ci.yml` already runs quality, integration, and e2e-local on `phase-*` pushes, so no scratch workflow was needed this phase.
+
+## Phase 6 - Redesign
+
+- Work commit: a8f0e26; CI promotion: c6910c0; local `--no-ff` merge into `main`.
+- Gate: lint (zero errors, three known warnings), workspace types, 611 tests, both static builds and smoke, budget (184.4/220 KB JS, 6.9/50 KB CSS), audit (zero high or critical; one moderate development advisory).
+- Browser gate: 27 visual/behavior tests at 1440/1024/768, 5 feature-parity E2E tests, and manual review of 36 baselines, forced password change, and generated icons. Local reruns pass without snapshot updates.
+- CI: runs 46033417153/46033417155 and consolidated run 46034187695 pass Node 24/26 quality, real-DB integration, E2E, client budgets, and Windows visuals. Jobs promoted to `ci.yml`; scratch removed. Only the phase branch is pushed; `main` remains local.
+- Deviation: P6 creates the static landing scaffold and interactive sample workspace; installation docs, Fumadocs, and full site SEO remain P9 scope.
+- Pen test fixed: quadratic unfinished links, unbounded list/table/rich previews, escaped diagram paint URLs, dialog focus, clipped provider actions, and tab-separated heading levels. Reproductions and results: `context/QA-P6.md`.
+- Accepted bounds: 1,000 preview units, 40 table columns, 20 rich blocks/equations, and 100 visible model results; refine search or copy/export full text. Complex diagram directives, sources, and escaped labels fall back to source.
+- Accepted: three existing compiler/image lint warnings and the moderate dev-server advisory; no development server ships in the static export. Prior script-CSP and provider-DNS limitations are unchanged.
+- Dependencies: KaTeX and Mermaid replace CDN renderers; highlight.js replaces regex highlighting; development-only Sharp generates brand rasters. No installed package or browser API supplied these capabilities.
 

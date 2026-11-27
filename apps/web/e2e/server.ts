@@ -10,13 +10,37 @@ import { bootstrapDatabase, createApp, loadEnv } from '@one-router/server';
 
 type Database = Awaited<ReturnType<typeof bootstrapDatabase>>['db'];
 
-const E2E_PORT = 4000;
-const E2E_ORIGIN = 'http://localhost:3100';
+const E2E_PORT = Number(process.env.E2E_PORT ?? 4000);
+const E2E_ORIGIN = process.env.E2E_ORIGIN ?? 'http://localhost:3100';
 
-const fixtureFetch: FetchLike = async (input) => {
+const fixtureFetch: FetchLike = async (input, init) => {
   const url = String(input);
   if (url.includes('/chat/completions')) {
-    const body = [
+    if (String(init?.body ?? '').includes('render-slow-fixture')) {
+      const encoder = new TextEncoder();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let finished = false;
+      let finish = () => {};
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          finish = () => { if (!finished) { finished = true; clearTimeout(timer); controller.close(); } };
+          controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Partial fixture response"}}]}\n\n'));
+          timer = setTimeout(() => {
+            if (!finished) controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":" finished"}}]}\n\ndata: [DONE]\n\n'));
+            finish();
+          }, 4000);
+          init?.signal?.addEventListener('abort', finish, { once: true });
+        },
+        cancel() { finished = true; clearTimeout(timer); init?.signal?.removeEventListener('abort', finish); },
+      });
+      return new Response(stream, { headers: { 'content-type': 'text/event-stream' } });
+    }
+    if (String(init?.body ?? '').includes('render-hostile-fixture')) {
+      const content = '###\tHeading\n\n<img src="//example.com/leak" onerror="document.documentElement.dataset.executed=1">\n\n[Open](javascript:alert(1))\n\n$$\\href{javascript:alert(1)}{unsafe}$$\n\n```mermaid\ngraph LR\n A@{ img: "relative.png" }\n```';
+      return new Response(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n`, { headers: { 'content-type': 'text/event-stream' } });
+    }
+    const rich = String(init?.body ?? '').includes('render-rich-fixture');
+    const body = rich ? `data: ${JSON.stringify({ choices: [{ delta: { content: 'Here is a small example.\n\n```typescript\nconst message: string = "Hello";\nconsole.log(message);\n```\n\n$$x^2 + y^2 = z^2$$\n\n```mermaid\ngraph LR\n A[Your message] --> B[ONE ROUTER]\n B --> C[Your model]\n```' } }] })}\n\ndata: [DONE]\n\n` : [
       'data: {"choices":[{"delta":{"content":"Fixture "}}]}',
       '',
       'data: {"choices":[{"delta":{"content":"reply."}}]}',

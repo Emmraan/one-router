@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
   images: { unoptimized: true },
-  transpilePackages: ['@one-router/core'],
+  transpilePackages: ['@one-router/core', '@one-router/ui'],
   basePath,
 };
 

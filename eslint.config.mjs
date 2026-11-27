@@ -12,9 +12,11 @@ export default defineConfig([
     '.ci-logs/**',
     'coverage/**',
     '**/next-env.d.ts',
+    '**/playwright-report/**',
+    '**/test-results/**',
   ]),
   {
-    files: ['apps/web/**/*.{js,jsx,mjs,cjs,ts,tsx}'],
+    files: ['apps/{web,site}/**/*.{js,jsx,mjs,cjs,ts,tsx}'],
     extends: [...next],
     rules: {
       // The app uses the App Router only; there is no pages directory to link to.
@@ -22,7 +24,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['scripts/**/*.ts', 'vitest.config.ts', 'packages/**/*.ts'],
+    files: ['scripts/**/*.ts', 'vitest.config.ts', 'packages/**/*.{ts,tsx}'],
     extends: [...tseslint.configs.recommended],
     rules: {
       '@typescript-eslint/no-unused-vars': [

@@ -9,7 +9,9 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build --filter=@one-router/web && node scripts/build-smoke.mjs",
+    "build": "turbo run build --filter=@one-router/web --filter=@one-router/site && node scripts/build-smoke.mjs",
+    "icons": "node scripts/generate-icons.mjs",
+    "test:visual": "pnpm --filter @one-router/web exec playwright test --config playwright.visual.config.ts",
     "start": "pnpm --filter @one-router/web start",
     "lint": "eslint .",
     "lint:changed": "node scripts/changed.mjs lint",
@@ -18,7 +20,7 @@
     "test": "vitest run",
     "test:changed": "node scripts/changed.mjs test",
     "test:integration": "vitest run packages/server packages/db/src",
-    "budget": "node scripts/budget.mjs",
+    "budget": "node scripts/budget.mjs && node scripts/client-budget.mjs",
     "audit:gate": "node scripts/audit-gate.mjs",
     "smoke:build": "node scripts/build-smoke.mjs",
     "clean": "turbo run clean --filter=@one-router/web && node -e \"require('node:fs').rmSync('.turbo',{recursive:true,force:true})\""
@@ -27,6 +29,7 @@
     "@types/node": "^24.19.4",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.6",
+    "sharp": "0.35.5",
     "turbo": "2.11.13",
     "typescript": "6.0.3",
     "typescript-eslint": "8.74.0",
