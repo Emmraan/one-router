@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { applyTheme, normalizeTheme, readThemeCookie, writeThemeCookie } from './theme';
+import { applyTheme, normalizeTheme, readThemeCookie, resolveTheme, writeThemeCookie, type Theme } from './theme';
 
 describe('normalizeTheme', () => {
-  const cases: Array<{ value: unknown; expected: 'light' | 'dark' }> = [
+  const cases: Array<{ value: unknown; expected: Theme }> = [
     { value: 'light', expected: 'light' },
     { value: 'dark', expected: 'dark' },
-    { value: 'system', expected: 'dark' },
+    { value: 'system', expected: 'system' },
     { value: 'LIGHT', expected: 'dark' },
     { value: '', expected: 'dark' },
     { value: null, expected: 'dark' },
@@ -21,7 +21,9 @@ describe('normalizeTheme', () => {
 });
 
 describe('readThemeCookie', () => {
-  const cases: Array<{ name: string; cookie: string; expected: 'light' | 'dark' | null }> = [
+  const cases: Array<{ name: string; cookie: string; expected: Theme | null }> = [
+    { name: 'system preference', cookie: 'one_router_theme=system', expected: 'system' },
+    { name: 'reject trailing punctuation', cookie: 'one_router_theme=dark-extra', expected: null },
     { name: 'only cookie', cookie: 'one_router_theme=light', expected: 'light' },
     { name: 'dark value', cookie: 'one_router_theme=dark', expected: 'dark' },
     { name: 'middle cookie', cookie: 'a=1; one_router_theme=dark; b=2', expected: 'dark' },
@@ -42,6 +44,15 @@ describe('readThemeCookie', () => {
       expect(readThemeCookie(testCase.cookie)).toBe(testCase.expected);
     });
   }
+});
+
+describe('resolveTheme', () => {
+  it.each([
+    ['system', true, 'dark'], ['system', false, 'light'],
+    ['light', true, 'light'], ['dark', false, 'dark'],
+  ] as const)('resolves %s with dark OS %s', (theme, dark, expected) => {
+    expect(resolveTheme(theme, dark)).toBe(expected);
+  });
 });
 
 describe('applyTheme', () => {

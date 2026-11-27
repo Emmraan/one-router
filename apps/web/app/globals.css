@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import "@one-router/ui/tokens.css";
+@import "@one-router/ui/motion.css";
+@import "@one-router/ui/workspace.css";
+@import "./transcript.css";
+@source "../../../packages/ui/src";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Custom Thin Scrollbar */
 * {

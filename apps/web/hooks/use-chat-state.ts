@@ -13,7 +13,6 @@ import { queryKeys } from '../lib/query';
 import type { MessageDto } from '../lib/api-types';
 import type { Chat, Message, Provider } from '../lib/provider-types';
 
-const SIDEBAR_KEY = 'onerouter_sidebar_open';
 const TEMPORARY_PREFIX = 'temporary-';
 export const isTemporaryChatId = (id: string | null): boolean => Boolean(id?.startsWith(TEMPORARY_PREFIX));
 
@@ -54,13 +53,7 @@ export function useChatState() {
 
   React.useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem(SIDEBAR_KEY);
-    if (stored !== null) setSidebarOpen(stored === 'true');
   }, []);
-
-  React.useEffect(() => {
-    if (mounted) localStorage.setItem(SIDEBAR_KEY, String(sidebarOpen));
-  }, [sidebarOpen, mounted]);
 
   const providers: Provider[] = React.useMemo(
     () => providerDtos.map((provider) => ({

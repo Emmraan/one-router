@@ -92,7 +92,7 @@ export function useStreaming({
 
       const provider = providers.find((p) => p.id === providerId) ?? providers.find((p) => p.isActive) ?? providers[0];
       if (!provider) {
-        setSendError('Configure and select an active provider in Providers Central.');
+        setSendError('Add a provider and choose a model in Providers.');
         return;
       }
       if (!activeModel) {

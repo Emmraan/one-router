@@ -3,7 +3,7 @@
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Image as ImageIcon, FileText, AlertTriangle, X } from 'lucide-react';
+import { Image as ImageIcon, FileText, AlertTriangle, X } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Sidebar } from '../../components/sidebar';
 import { ChatMessageItem } from '../../components/chat-message-item';
@@ -21,6 +21,8 @@ import { useEnhance } from '../../hooks/use-enhance';
 import { useChatEditing } from '../../hooks/use-chat-editing';
 import { useTextSelection } from '../../hooks/use-text-selection';
 import { useLogout } from '../../hooks/use-auth';
+import { LoadingScreen } from '../../components/loading-screen';
+import { ConnectionStatus } from '../../components/connection-status';
 
 // Dialogs are opened on demand; keeping them out of the initial route leaves
 // room for the NFR-15 JS budget.
@@ -36,13 +38,10 @@ const DataDialog = dynamic(
   () => import('../../components/data-dialog').then((module) => module.DataDialog),
   { ssr: false },
 );
+const SettingsPanel = dynamic(() => import('../../components/settings-panel').then((module) => module.SettingsPanel), { ssr: false });
 
-function getFileIcon(fileName: string, mimeType: string) {
-  const ext = fileName.split('.').pop()?.toLowerCase();
-  if (mimeType.startsWith('image/')) return <ImageIcon size={14} className="text-indigo-500" />;
-  if (mimeType === 'application/pdf' || ext === 'pdf') return <FileText size={14} className="text-red-500" />;
-  if (ext === 'md' || ext === 'markdown' || mimeType === 'text/markdown') return <FileText size={14} className="text-emerald-500" />;
-  return <FileText size={14} className="text-zinc-400 font-bold" />;
+function getFileIcon(_fileName: string, mimeType: string) {
+  return mimeType.startsWith('image/') ? <ImageIcon size={14} className="muted" /> : <FileText size={14} className="muted" />;
 }
 
 function quoteText(text: string): string {
@@ -51,7 +50,7 @@ function quoteText(text: string): string {
 
 function Notice({ message, onDismiss }: { message: string; onDismiss?: () => void }) {
   return (
-    <div role="alert" className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-[11px] text-red-700 dark:text-red-400">
+    <div role="alert" className="status-notice error-notice flex items-start justify-between gap-3">
       <span className="flex items-start gap-1.5">
         <AlertTriangle size={12} className="mt-0.5 shrink-0" />
         {message}
@@ -70,9 +69,9 @@ export default function HomePage() {
   const logoutMutation = useLogout();
   const {
     sidebarOpen, setSidebarOpen, dashboardOpen, setDashboardOpen,
-    theme, providers, chats, messages,
+    providers, chats, messages,
     activeChatId, setActiveChatId, activeChat, activeModel, activeProviderId,
-    mounted, toggleTheme, createNewChat, selectChat,
+    mounted, createNewChat, selectChat,
     deleteChat, renameChat, togglePinChat, selectModelAndProvider,
     temporaryChat, savingTemporary, temporaryError, setTemporaryError,
     createTemporaryChat, saveTemporaryChat, discardTemporaryChat,
@@ -89,6 +88,7 @@ export default function HomePage() {
 
   const [inputText, setInputText] = React.useState('');
   const [dataOpen, setDataOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [logoutExitOpen, setLogoutExitOpen] = React.useState(false);
 
   const {
@@ -199,7 +199,7 @@ export default function HomePage() {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({
         top: scrollContainerRef.current.scrollHeight,
-        behavior: 'smooth',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       });
     }
   }, [activeChatMessages.length, isStreaming]);
@@ -235,17 +235,10 @@ export default function HomePage() {
     />
   );
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center font-sans">
-        <RefreshCw size={24} className="text-indigo-600 animate-spin" />
-        <p className="text-xs text-zinc-400 mt-2 font-mono">ONE ROUTER Loading...</p>
-      </div>
-    );
-  }
+  if (!mounted) return <LoadingScreen />;
 
   return (
-    <div className={`flex w-full h-screen overflow-hidden font-sans text-gray-900 bg-zinc-50 dark:bg-[#0a0a0a] dark:text-zinc-300 ${theme}`}>
+    <div className="workspace-frame">
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -256,15 +249,14 @@ export default function HomePage() {
         onDeleteChat={deleteChat}
         onRenameChat={renameChat}
         onOpenDashboard={() => setDashboardOpen(true)}
-        theme={theme}
-        onToggleTheme={toggleTheme}
+        onOpenSettings={() => setSettingsOpen(true)}
         onTogglePin={togglePinChat}
         onSaveTemporary={() => { void saveCurrentTemporary(); }}
         savingTemporary={savingTemporary}
       />
 
-      <div
-        className="flex-1 flex flex-col h-full overflow-hidden relative"
+      <main
+        className="workspace-main"
         {...dragHandlers}
       >
         <DragOverlay
@@ -289,6 +281,7 @@ export default function HomePage() {
             onOpenData={() => setDataOpen(true)}
           />
         </HeaderBar>
+        <ConnectionStatus />
 
         {sendError && <Notice message={sendError} onDismiss={() => setSendError('')} />}
         {editError && <Notice message={editError} onDismiss={clearEditError} />}
@@ -296,14 +289,14 @@ export default function HomePage() {
           <Notice message={temporaryError} onDismiss={() => setTemporaryError('')} />
         )}
 
-        <div className="flex-1 overflow-hidden relative flex flex-col bg-zinc-50/50 dark:bg-[#0a0a0a]">
+        <div className="flex-1 overflow-auto relative flex flex-col">
           {activeChatMessages.length > 0 ? (
             <div className="flex-1 flex flex-col overflow-hidden relative">
               <div
                 ref={scrollContainerRef}
-                className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-12 py-8 scroll-smooth scrollbar-thin relative"
+                className="flex-1 overflow-y-auto overflow-x-hidden px-6 lg:px-12 py-7 scrollbar-thin relative"
               >
-                <div className="w-[54rem] max-w-full mx-auto">
+                <div className="w-[46rem] max-w-full mx-auto">
                   <div
                     style={{
                       height: `${rowVirtualizer.getTotalSize()}px`,
@@ -361,7 +354,7 @@ export default function HomePage() {
                 />
               </div>
 
-              {renderInputDeck()}
+              <div className="transcript-composer">{renderInputDeck()}<p className="text-center text-[11px] muted mt-2">Check important information. Responses come from your selected provider.</p></div>
             </div>
           ) : (
             <GreetingView
@@ -371,11 +364,12 @@ export default function HomePage() {
           )}
         </div>
 
-        <ProviderDashboard
+        {dashboardOpen && <ProviderDashboard
           isOpen={dashboardOpen}
           onClose={() => setDashboardOpen(false)}
           providers={providers}
-        />
+        />}
+        {settingsOpen && <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenData={() => setDataOpen(true)} />}
 
         {dataOpen && (
           <DataDialog
@@ -402,7 +396,7 @@ export default function HomePage() {
           onDiscard={() => { void resolveLogout('discard'); }}
           onSave={() => { void resolveLogout('save'); }}
         />
-      </div>
+      </main>
     </div>
   );
 }

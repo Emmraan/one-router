@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { X, Database, Plus } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Plus } from 'lucide-react';
+import { Dialog } from '@one-router/ui/dialog';
 import { Provider, ProviderType, PROVIDER_DEFAULTS } from '../lib/provider-types';
 import { discoverModels as discoverRequest } from '../lib/api';
 import { useCreateProvider, useDeleteProvider, useUpdateProvider } from '../hooks/use-providers';
@@ -141,7 +141,7 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
     try {
       await deleteProvider.mutateAsync(id);
     } catch {
-      // The list refreshes from the server on the next read.
+      setDiscoveryError('Could not delete the provider. Try again.');
     }
     if (editingId === id) handleCloseForm();
   };
@@ -173,7 +173,7 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
         }),
       );
     } catch {
-      // Leave the previous selection; the list re-reads on the next mount.
+      setDiscoveryError('Could not change the default provider. Try again.');
     }
   };
 
@@ -189,35 +189,14 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
         isActive: providers.length === 0,
       });
     } catch {
-      // Surface failures through the discovery banner on the next action.
+      setDiscoveryError('Could not add the preset. Try again.');
     }
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-50 bg-black/45 dark:bg-black/65 backdrop-blur-xs cursor-pointer" id="providers-modal-backdrop" />
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 240 }}
-            className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md md:max-w-xl bg-white dark:bg-[#070707] border-l border-zinc-300/40 dark:border-zinc-700/30 shadow-2xl flex flex-col h-full overflow-hidden text-gray-900 dark:text-zinc-200"
-            id="providers-right-drawer"
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-300/40 dark:border-zinc-700/30 bg-zinc-50/50 dark:bg-zinc-950/20 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500"><Database size={16} /></div>
-                <div>
-                  <h2 className="text-sm font-bold text-zinc-950 dark:text-white uppercase tracking-wider">Providers Central</h2>
-                  <p className="text-[10px] text-zinc-400 font-medium">Manage localized endpoints or remote third-party engines.</p>
-                </div>
-              </div>
-              <button type="button" onClick={onClose} className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 cursor-pointer transition" id="drawer-close-btn"><X size={15} /></button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
+    <>
+          <Dialog open={isOpen} onClose={onClose} title="Providers" description="Connect your models and choose a default provider." className="dialog-drawer" id="providers-right-drawer">
+            <div className="dialog-body space-y-5">
               {editingId ? (
                 <ProviderForm
                   editingId={editingId}
@@ -228,6 +207,7 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
                   formModels={formModels} setFormModels={setFormModels}
                   formHeaders={formHeaders} setFormHeaders={setFormHeaders}
                   validationError={validationError}
+                  saving={createProvider.isPending || updateProvider.isPending}
                   isTestingConnection={isTestingConnection}
                   testResult={testResult}
                   showKeyRaw={!!editingId && !!showKeyRaw[editingId]}
@@ -239,8 +219,8 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
                 />
               ) : (
                 <>
-                  <div className="flex items-center justify-between border-b border-zinc-300/40 dark:border-zinc-700/30 pb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 font-mono">Connected Engine Groups</span>
+                  <div className="flex items-center justify-between pb-3">
+                    <h3 className="font-semibold">Your providers <span className="muted ml-1">{providers.length}</span></h3>
                     <button
                       type="button"
                       onClick={() => {
@@ -254,10 +234,10 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
                         setValidationError('');
                         setTestResult(null);
                       }}
-                      className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-zinc-955 text-white hover:bg-zinc-900 dark:bg-emerald-500 dark:text-black dark:hover:bg-emerald-400 transition cursor-pointer shadow-xs"
+                      className="button primary"
                       id="btn-add-provider-trigger"
                     >
-                      <Plus size={13} /> Add Provider
+                      <Plus size={14} /> Add provider
                     </button>
                   </div>
                   <ProviderList
@@ -274,13 +254,8 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
               )}
             </div>
 
-            <div className="px-5 py-3.5 bg-zinc-50 dark:bg-zinc-950/40 border-t border-zinc-300/40 dark:border-zinc-700/30 text-[10px] text-zinc-450 dark:text-zinc-550 flex justify-between items-center shrink-0 font-mono">
-              <span className="flex items-center gap-1"><Database size={10} /> Active Provider Groups:</span>
-              <span className="font-bold text-emerald-500">{providers.length}</span>
-            </div>
-          </motion.div>
-        </>
-      )}
+            <div className="dialog-footer !justify-start muted text-xs">Provider keys stay encrypted on your server.</div>
+          </Dialog>
       <ConfirmModal
         isOpen={deleteConfirmId !== null}
         onClose={() => setDeleteConfirmId(null)}
@@ -290,6 +265,6 @@ export function ProviderDashboard({ isOpen, onClose, providers }: ProviderDashbo
         confirmLabel="Delete"
         variant="danger"
       />
-    </AnimatePresence>
+    </>
   );
 }

@@ -238,7 +238,7 @@ if (isMain()) {
     console.log(`  ${formatKb(asset.gzip).padStart(9)}  ${asset.file}`);
   }
 
-  console.log('NFR-16 to NFR-21 are measured in later phases (P6, P8, P10).');
+  console.log('NFR-16/21 source boundaries run next; runtime budgets remain in P8/P10.');
 
   if (!result.evaluation.ok) {
     process.exit(1);

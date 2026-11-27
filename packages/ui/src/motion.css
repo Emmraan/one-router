@@ -1,0 +1,8 @@
+.button, .icon-button, .composer, .field, .prompt-suggestions button {
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+.or-dialog[open] { animation: dialog-enter 180ms ease-out; }
+@keyframes dialog-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

@@ -32,20 +32,21 @@ export function DragOverlay({ isDragging, onFilesDrop, onDragLeaveWorkspace }: D
 
   return (
     <div
-      className="absolute inset-0 bg-white/70 dark:bg-[#070707]/80 backdrop-blur-xs z-[100] flex flex-col items-center justify-center p-6 border-4 border-dashed border-emerald-500/50 m-4 rounded-3xl animate-fade-in"
+      className="drop-overlay"
+      role="status"
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
     >
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="p-4 rounded-full bg-emerald-500/10 text-emerald-500 animate-bounce">
-          <CornerDownLeft size={36} className="rotate-90 shrink-0 text-emerald-500" />
+        <div>
+          <CornerDownLeft size={32} className="rotate-90" />
         </div>
         <div>
-          <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white uppercase tracking-wider font-mono">
-            Drop files to routing stream
+          <h3 className="text-lg font-semibold">
+            Drop files to attach
           </h3>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm leading-relaxed font-semibold">
+          <p className="text-sm muted mt-2 max-w-sm leading-relaxed">
             Upload images, PDFs, Markdown, JSON, CSV, or plain text files.
           </p>
         </div>

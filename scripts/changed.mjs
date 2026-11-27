@@ -44,6 +44,11 @@ export function mapChangedFiles(files) {
       continue;
     }
 
+    if (normalized.startsWith('apps/site/')) {
+      targets.add('site');
+      continue;
+    }
+
     if (normalized.startsWith('packages/')) {
       const match = /^packages\/([^/]+)\//.exec(normalized);
       if (match) targets.add(`package:${match[1]}`);
@@ -83,6 +88,7 @@ export function planCommands(action, targets) {
 
   if (action === 'typecheck') {
     const commands = [];
+    if (targets.includes('site')) commands.push({ command: 'pnpm', args: ['--filter', '@one-router/site', 'typecheck'] });
     if (targets.includes('web')) {
       commands.push({
         command: 'pnpm',

@@ -66,7 +66,7 @@ test('temporary chat stays in memory until it is saved', async ({ page }) => {
   const before = await stats(page);
 
   await page.locator('#new-temporary-chat').click();
-  await expect(page.getByText('Temporary', { exact: true })).toBeVisible();
+  await expect(page.locator('#save-temporary-chat')).toBeVisible();
 
   await page.getByLabel('Upload files').setInputFiles({
     name: 'notes.txt',
@@ -76,7 +76,7 @@ test('temporary chat stays in memory until it is saved', async ({ page }) => {
   await expect(page.getByText('notes.txt')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Submit' })).toBeEnabled();
 
-  const composer = page.getByLabel('Message');
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
   await composer.fill('temporary hello');
   await composer.press('Enter');
   await expect(page.getByText('Fixture reply.').first()).toBeVisible({ timeout: 20_000 });
@@ -111,7 +111,7 @@ test('uploads, enhancement, and archive roundtrip', async ({ page }) => {
   await expect(page.getByText('document.pdf')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Submit' })).toBeEnabled();
 
-  const composer = page.getByLabel('Message');
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
   await composer.fill('files and prompt');
   await composer.press('Enter');
   await expect(page.getByText('Fixture reply.').first()).toBeVisible({ timeout: 20_000 });
@@ -176,5 +176,46 @@ test('search, pin, and trash recovery', async ({ page }) => {
   await page.locator('#search-chats-input').fill('');
   await page.locator('#open-trash').click();
   await expect(page.getByRole('heading', { name: 'Trash' })).toBeVisible();
-  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('button', { name: 'Close Trash', exact: true }).click();
+});
+
+test('upload recovery, editing, regeneration, export and stopping remain usable', async ({ page }) => {
+  await login(page);
+  await page.locator('#btn-new-chat').click();
+  await page.route('**/api/files', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Fixture upload failed.' }) }), { times: 1 });
+  await page.getByLabel('Upload files').setInputFiles({ name: 'retry.txt', mimeType: 'text/plain', buffer: Buffer.from('Retry body') });
+  await expect(page.getByText('Fixture upload failed.')).toBeVisible();
+  await page.getByRole('button', { name: 'Retry retry.txt' }).click();
+  await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Remove retry.txt' }).click();
+  await expect(page.getByText('retry.txt', { exact: true })).toHaveCount(0);
+
+  const composer = page.getByRole('textbox', { name: 'Message', exact: true });
+  await composer.fill('Edit this message');
+  await composer.press('Enter');
+  await expect(page.locator('.message-row.assistant .message-content')).toContainText('Fixture reply.');
+  await page.locator('.message-row.user').hover();
+  await page.locator('.message-row.user').getByRole('button', { name: 'Edit', exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'Edit message', exact: true });
+  await editor.fill('Edited message');
+  await Promise.all([page.waitForResponse((response) => new URL(response.url()).pathname === '/api/chat'), editor.press('Control+Enter')]);
+  await expect(page.locator('.message-row.user .message-content')).toContainText('Edited message');
+  await expect(page.getByRole('button', { name: 'Stop response' })).toHaveCount(0);
+  await page.locator('.message-row.assistant').hover();
+  await Promise.all([page.waitForResponse((response) => new URL(response.url()).pathname === '/api/chat'), page.getByRole('button', { name: 'Regenerate', exact: true }).click()]);
+  await expect(page.getByRole('button', { name: 'Stop response' })).toHaveCount(0);
+  await page.locator('.message-row.assistant').hover();
+  await page.getByRole('button', { name: 'Quote', exact: true }).click();
+  await expect(composer).toHaveValue(/> Fixture reply\./);
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  expect((await downloaded).suggestedFilename()).toMatch(/\.md$/);
+
+  await page.locator('#btn-new-chat').click();
+  await composer.fill('render-slow-fixture');
+  await composer.press('Enter');
+  await expect(page.locator('.message-row.assistant')).toContainText('Partial fixture response');
+  await page.getByRole('button', { name: 'Stop response' }).click();
+  await expect(page.getByRole('button', { name: 'Stop response' })).toHaveCount(0);
+  await expect(page.locator('.message-row.assistant')).not.toContainText('finished');
 });
