@@ -47,8 +47,10 @@ and animation boundaries pass. All 27 visual/behavior tests and 5 feature-parity
 E2E tests pass against the production exports and local fixture provider.
 
 The malformed-link regressions pass after the fix, and all 27 visual checks pass
-again without updating baselines. Remote CI is pending; this document does not
-claim a CI pass.
+again without updating baselines. GitHub CI runs 46033417153 and 46033417155 pass
+on work commit `a8f0e26`: Node 24/26 quality, real-DB integration, feature E2E,
+client budgets, and Windows visual checks. The validated budget and visual jobs
+are promoted into `ci.yml`; the scratch workflow is removed before merge.
 
 ## Adversarial review
 
