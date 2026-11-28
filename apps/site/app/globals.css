@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 @import "@one-router/ui/tokens.css";
 @import "@one-router/ui/motion.css";
 @import "@one-router/ui/workspace.css";
@@ -7,7 +9,10 @@
 html { scroll-behavior: smooth; }
 body { margin: 0; }
 .site-header, .site-footer { max-width: 1280px; margin: auto; padding: 28px 40px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
-.site-header > a:last-child { color: var(--muted); }
+.site-header, .site-footer { gap: 20px; flex-wrap: wrap; }
+.site-header nav, .site-footer nav { display: flex; flex-wrap: wrap; gap: 14px 22px; color: var(--muted); }
+.site-header nav a:hover, .site-footer nav a:hover { color: var(--text); text-decoration: underline; }
+.site-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .site-hero { max-width: 1280px; padding: 100px 40px 80px; margin: auto; }
 .site-hero h1 { font-size: clamp(44px, 6.5vw, 76px); line-height: 1.08; letter-spacing: -.045em; font-weight: 600; margin: 20px 0 24px; }
 .site-hero > p:not(.eyebrow) { max-width: 500px; font-size: 18px; line-height: 1.65; color: var(--muted); margin-bottom: 30px; }
@@ -27,5 +32,11 @@ body { margin: 0; }
 .site-principles { max-width: 1280px; margin: 90px auto; padding: 0 40px; }
 .site-principles dl { margin-top: 30px; }.site-principles dl > div { display: grid; grid-template-columns: 220px 1fr; gap: 30px; padding: 24px 0; border-top: 1px solid var(--border); }
 .site-principles dt { font-weight: 600; }.site-principles dd { color: var(--muted); max-width: 600px; line-height: 1.7; font-size: 14px; }
+.site-principles dd > a:not(.button) { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.site-install { scroll-margin-top: 28px; }
+.site-install dd { min-width: 0; }
+.site-install pre { background: var(--raised); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 10px 14px; overflow: auto; margin-bottom: 12px; font-size: 12px; }
+.site-install p, .site-install .site-actions { margin-bottom: 10px; }
 .site-footer { border-top: 1px solid var(--border); color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media (max-width: 800px) { .site-header, .site-footer { padding: 24px; }.site-hero { padding: 64px 24px; }.site-showcase { padding: 0 16px; }.showcase-caption { display: block; }.live-preview .app-sidebar { width: 56px; }.live-preview .sidebar-brand { padding: 10px; }.live-preview .sidebar-brand .wordmark span, .live-preview .sidebar-brand .icon-button, .live-preview .sidebar-new kbd, .live-preview .sidebar-new:not(svg), .live-preview .sidebar-search, .live-preview .sidebar-history, .live-preview .sidebar-link { font-size: 0; }.live-preview .sidebar-brand .wordmark svg { width: 28px; }.live-preview .sidebar-new { padding: 7px; }.live-preview .sidebar-tools { padding: 16px 10px; }.live-preview .sidebar-footer { padding: 8px 0 8px 10px; }.live-preview .sidebar-link { gap: 0; }.live-preview .welcome { max-width: calc(100% - 32px); }.live-preview .welcome h1 { font-size: 22px; }.live-preview .workspace-frame { height: 680px; }.site-principles { padding: 0 24px; margin-block: 64px; }.site-principles dl > div { grid-template-columns: 1fr; gap: 10px; } }

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-compose=(docker compose --project-name onerouter-phase8 --file docker/compose.yml --env-file docker/.env)
+export COMPOSE_PROJECT_NAME=onerouter-phase8
+compose=(docker compose --file docker/compose.yml --env-file docker/.env)
+doc_command() { node scripts/docs-command.mjs "$1"; }
 origin=http://127.0.0.1:3000
 export INITIAL_PASSWORD='Docker smoke bootstrap!47' OWNER_PASSWORD='Docker smoke owner!53'
 reset_password='Docker smoke reset!61'
@@ -18,7 +20,7 @@ cleanup() {
 trap cleanup EXIT
 printf 'INITIAL_PASSWORD=%s\n' "$INITIAL_PASSWORD" > docker/.env
 "${compose[@]}" --profile minio config --quiet
-"${compose[@]}" up -d --build --wait --wait-timeout 90
+bash -ec "$(doc_command docker-start) --wait-timeout 90"
 container=$("${compose[@]}" ps -q one-router)
 image=$(docker inspect --format '{{.Image}}' "$container")
 size=$(docker image inspect --format '{{.Size}}' "$image")
@@ -41,7 +43,7 @@ id=$(node scripts/deployment-smoke.mjs fresh "$origin")
 node scripts/deployment-smoke.mjs persist "$origin" "$id"
 
 # Removing the installation leaves the named volume unless explicitly purged.
-"${compose[@]}" down
+bash -ec "$(doc_command docker-down)"
 docker volume inspect one-router-data >/dev/null
 export INITIAL_PASSWORD='Docker smoke ignored!79'
 printf 'INITIAL_PASSWORD=%s\n' "$INITIAL_PASSWORD" > docker/.env
@@ -50,10 +52,13 @@ node scripts/deployment-smoke.mjs persist "$origin" "$id"
 container=$("${compose[@]}" ps -q one-router)
 logs=$(docker logs "$container" 2>&1)
 [[ $logs != *"$INITIAL_PASSWORD"* && $logs != *'Bootstrap owner password'* ]]
-printf '%s\n' "$reset_password" | docker exec -i "$container" one-router user reset-password --stdin
+reset=$(doc_command docker-reset)
+# The fixture supplies a password over stdin rather than opening a terminal.
+printf '%s\n' "$reset_password" | bash -ec "${reset/ exec / exec -T } --stdin"
 OWNER_PASSWORD=$reset_password node scripts/deployment-smoke.mjs reset "$origin"
-"${compose[@]}" down --volumes
+bash -ec "$(doc_command docker-purge)"
 if docker volume inspect one-router-data >/dev/null 2>&1; then exit 1; fi
+if [[ ${1:-} == --docs-only ]]; then exit 0; fi
 
 docker run -d --name onerouter-phase8-nomount --publish 127.0.0.1:3000:3000 "$image" >/dev/null
 for attempt in {1..30}; do

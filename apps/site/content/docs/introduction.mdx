@@ -1,0 +1,16 @@
+---
+title: Introduction
+description: How the chat workspace, gateway, and provider connections fit together.
+---
+
+## One workspace, multiple providers
+
+Use OpenAI, Anthropic, Gemini, Ollama, or an OpenAI-compatible endpoint from a single chat. Switch models between messages, keep frequently used models in favourites, and pin or search saved chats. A temporary chat stays in memory until you save it.
+
+## Use the same models from other tools
+
+Point an OpenAI-compatible client at your [gateway](/docs/gateway/). You use a gateway token, while ONE ROUTER uses your provider credentials to make the upstream request.
+
+## Where the data goes
+
+You host the workspace and database. When you send a message or use provider-powered features, relevant content goes to the selected provider. Provider terms and billing still apply. You can also run a [local Ollama provider](/docs/providers/#ollama).

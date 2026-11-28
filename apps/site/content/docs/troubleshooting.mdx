@@ -1,0 +1,18 @@
+---
+title: Troubleshooting
+description: Diagnose startup, sign-in, provider, and upload problems.
+---
+
+## Check the service
+
+Use the URL reported at startup. A local CLI can use the next available port if 3000 is already in use. Append `/health` to the actual origin and open it in the browser. A healthy response reports `status: ok` and `database: ok`. If the service does not start, look for the first startup error, check the data directory permissions, and verify any Turso settings or key.
+
+## Cannot sign in
+
+Use the same origin consistently; cookies for `localhost` and `127.0.0.1` are different. If behind a reverse proxy, use HTTPS and the configured public origin. `INITIAL_PASSWORD` only sets the first password. Use [password recovery](/docs/passwords/) for an existing owner.
+
+## A model or upload fails
+
+Check the provider base URL, API key, available models, and billing. Verify that the server can reach the provider. For uploads, confirm that the model supports the attachment type and that storage is enabled. If replies arrive only after a delay behind a proxy, check whether response buffering is enabled.
+
+When reporting a problem, include the platform, install method, and relevant error text with passwords, keys, tokens, local paths, and private URLs removed.

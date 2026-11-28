@@ -1,62 +1,15 @@
 # ONE ROUTER
 
-A multi-provider AI chat client. The current app supports OpenAI, Anthropic, Gemini, and Ollama through one interface.
+A self-hosted AI chat workspace and OpenAI-compatible API gateway. Connect your own OpenAI, Anthropic, Gemini, Ollama, or compatible providers and switch models in the same conversation.
 
-This repository is moving from a single Next.js app to a pnpm monorepo. Phase 0 moved the app to `apps/web` and added the shared gates. Later phases add the core, database, server, CLI, and landing site.
+![Animated preview of ONE ROUTER switching models and showing a chat reply](./apps/site/public/workspace-preview.svg)
 
-## Requirements
+## Run it
 
-- Node.js 24 or newer
-- pnpm 10.33.2
+With Node.js 24 or newer, run `npx onerouter` once the first npm release is published. Until then, use the [Docker guide](./apps/site/content/docs/docker.mdx) or [build from source](./apps/site/content/docs/installation.mdx#build-from-source).
 
-## Development
+- Search and pin chats, attach files, or start a temporary chat.
+- Connect OpenAI-compatible tools through your own gateway and model aliases.
+- Keep data on your infrastructure and move it with an encrypted archive.
 
-```bash
-pnpm install
-pnpm dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Scripts
-
-| Command | Purpose |
-|---|---|
-| `pnpm dev` | Start the web app |
-| `pnpm build` | Production build and build smoke check |
-| `pnpm start` | Start the production server |
-| `pnpm lint` | Run ESLint |
-| `pnpm typecheck` | Typecheck the app and root scripts |
-| `pnpm test` | Run the unit tests |
-| `pnpm budget` | Check the NFR-15 JS and CSS budgets |
-| `pnpm audit:gate` | Fail on high or critical dependency advisories |
-| `pnpm lint:changed` | Lint only the changed targets |
-| `pnpm typecheck:changed` | Typecheck only the changed targets |
-| `pnpm test:changed` | Test only the changed targets |
-| `pnpm clean` | Remove build and Turbo caches |
-
-The full phase gate is:
-
-```bash
-pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm budget && pnpm audit:gate
-```
-
-## Layout
-
-```text
-apps/web/      Next.js chat app
-scripts/       changed-target, budget, audit, build smoke, and CI helpers
-context/       PRD, plan, and progress
-.github/       CI workflows
-```
-
-## Current state
-
-The app still stores providers, API keys, chats, and the master key in `localStorage`, and encrypts API keys in the browser with AES-GCM. Phase 4 moves application data to the server. The Next config keeps `output: 'standalone'` until the static export lands in Phase 4.
-
-## Links
-
-- [Agent guide](./AGENTS.md)
-- [Plan](./context/PLAN.md)
-- [Progress](./context/PROGRESS.md)
-- [License](./LICENSE)
+[Documentation source](./apps/site/content/docs) · [Run `/docs` locally](./apps/site/content/docs/development.mdx#run-the-docs-locally) · [MIT License](./LICENSE)

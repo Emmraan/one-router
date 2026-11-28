@@ -1,0 +1,42 @@
+---
+title: Uninstall
+description: Remove the service and decide whether to retain or permanently delete your data.
+---
+
+## CLI
+
+Stop the app with `Ctrl+C` in its terminal, then remove the global install if you used one:
+
+```sh verify="npm-uninstall"
+npm uninstall -g onerouter
+```
+
+The `.one-router` data directory in your home directory stays in place. Delete it only if you intend to permanently erase the local database, attachments, and key. If you configured a different data directory, check that location as well.
+
+## Docker
+
+Remove the container and keep the data volume:
+
+```sh verify="docker-down"
+docker compose --env-file docker/.env -f docker/compose.yml down
+```
+
+**This next command permanently deletes the stack's named volumes.** Back up the database, attachments, and key first. Include the `minio` profile if you used it and intend to purge its volume too.
+
+```sh verify="docker-purge"
+docker compose --env-file docker/.env -f docker/compose.yml down --volumes
+```
+
+## systemd
+
+Disable the unit and stop the process:
+
+```bash verify="systemd-stop"
+sudo systemctl disable --now one-router.service
+```
+
+Remove the unit from `/etc/systemd/system`, reload systemd, and uninstall the CLI. Keep `/var/lib/one-router` and a protected copy of the configuration if you plan to reinstall. Deleting this directory permanently removes local state.
+
+## Vercel and remote storage
+
+Delete the Vercel project after removing any DNS or proxy route. Turso databases and S3-compatible buckets are separate resources. Delete them only if you intend to permanently erase their data and have verified your backup. Revoke unused database, storage, and provider credentials.

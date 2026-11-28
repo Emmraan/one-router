@@ -1,0 +1,22 @@
+---
+title: Docker
+description: Build the Compose app and keep your data in a persistent volume.
+---
+
+## Start with Compose
+
+Install Docker with Compose v2. Open a terminal in your checkout of the ONE ROUTER repository. Duplicate `docker/.env.example` as `docker/.env`; in it, set `INITIAL_PASSWORD` to a long, unique password, or leave it blank to use a generated password.
+
+```sh verify="docker-start"
+docker compose --env-file docker/.env -f docker/compose.yml up -d --build --wait
+```
+
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000) and sign in. If you let the app generate the password, get it from the first startup log using your local Docker dashboard. Keep that output private. Change the initial password at first login. Then remove `INITIAL_PASSWORD` from `docker/.env` and recreate the service to clear it from the container environment.
+
+## Data and upgrades
+
+The `one-router-data` volume is mounted at `/data`. Keep it attached on every start; it contains the local database, key and default attachment store. Before an upgrade, [make a backup](/docs/backup/), update the checkout, then rerun the Compose command. The app migrates the existing database when it starts.
+
+If you enable the optional `minio` profile for object storage, configure the MinIO credentials, create a private `one-router` bucket, and then set the application's `S3_*` variables with a bucket-scoped key. Keep the MinIO data volume as part of the backup.
+
+For a public host, use a [VPS reverse proxy](/docs/vps/). For account recovery and cleanup, see [password reset](/docs/passwords/#reset-in-docker) and [uninstall](/docs/uninstall/#docker).

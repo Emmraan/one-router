@@ -1,0 +1,38 @@
+---
+title: API gateway
+description: Use ONE ROUTER with OpenAI-compatible clients.
+---
+
+## Connect a client
+
+Set `ONE_ROUTER_AUTH_TOKEN` on the server, restart the service, and finish first-login setup in the workspace. Set the client base URL to `http://127.0.0.1:3000/v1` for a default local install, or use your HTTPS origin with `/v1` for a hosted instance. Enter the gateway token as the client's API key. Use the model ID or alias returned by `GET /v1/models`.
+
+### List models on macOS or Linux
+
+Set `ONE_ROUTER_AUTH_TOKEN` in the current terminal to the token also configured on the server, then run:
+
+```bash verify="gateway-models-posix"
+curl --fail --silent --show-error -H "Authorization: Bearer $ONE_ROUTER_AUTH_TOKEN" http://127.0.0.1:3000/v1/models
+```
+
+### List models on Windows
+
+Use the same token in the current PowerShell session:
+
+```powershell verify="gateway-models-windows"
+Invoke-RestMethod -Uri http://127.0.0.1:3000/v1/models -Headers @{ Authorization = "Bearer $env:ONE_ROUTER_AUTH_TOKEN" }
+```
+
+## Send a completion
+
+`POST /v1/chat/completions` accepts `model`, `messages`, and an optional `stream` flag. Use a model returned by your instance in place of `openai/gpt-4.1-mini` if it is not configured:
+
+```json
+{
+  "model": "openai/gpt-4.1-mini",
+  "messages": [{ "role": "user", "content": "Summarize this conversation." }],
+  "stream": false
+}
+```
+
+Use `stream: true` to receive server-sent events. A `401` points to an absent or incorrect token, a `403` can indicate unfinished first-login setup, and a `400` can indicate an invalid model or request. Your instance serves its schema at `/openapi.json`.

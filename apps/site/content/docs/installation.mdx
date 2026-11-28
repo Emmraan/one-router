@@ -1,0 +1,32 @@
+---
+title: Installation
+description: Install the CLI on Windows, macOS, or Linux, or build it from source.
+---
+
+## Install the CLI
+
+Use Node.js <NodeVersion /> on Windows, macOS, or Linux. After the package is available on npm, install it globally and check the installed command:
+
+```sh verify="npm-install"
+npm i -g onerouter
+one-router --version
+```
+
+Both `one-router` and `onerouter` run the same CLI. On Windows, use `npx.cmd`, `npm.cmd`, and `one-router.cmd` in PowerShell if execution policy blocks the generated `.ps1` shims.
+
+## Build from source
+
+Use Node.js <NodeVersion />, Git, and pnpm <PnpmVersion />. Run these commands from a checkout of the [repository](https://github.com/Emmraan/one-router) on a revision that includes the CLI.
+
+```sh verify="source-build"
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+Launch the CLI from the repository root:
+
+```sh verify="source-serve"
+node packages/cli/dist/index.js serve --no-open
+```
+
+For a container installation, follow [Docker](/docs/docker/). On a Linux server, [systemd](/docs/systemd/) keeps the service running after logout and reboot.

@@ -34,7 +34,7 @@ jobs:
           mkdir "$RUNNER_TEMP/cli-pack"
           pnpm -C packages/cli pack --pack-destination "$RUNNER_TEMP/cli-pack"
           node -e 'const fs = require("node:fs"); const bytes = fs.statSync(process.argv[1]).size; console.log(`${bytes} bytes`); if (bytes >= 5_000_000) process.exitCode = 1' "$RUNNER_TEMP"/cli-pack/*.tgz
-          cp scripts/cli-smoke.mjs "$RUNNER_TEMP/cli-pack/"
+          cp scripts/cli-smoke.mjs scripts/docs-commands.json "$RUNNER_TEMP/cli-pack/"
       - uses: actions/upload-artifact@v4
         with:
           name: onerouter-tarball
@@ -73,7 +73,9 @@ jobs:
           pnpm add $tarball
           pnpm exec one-router --help
           pnpm exec onerouter --version
-          node (Join-Path $artifact 'cli-smoke.mjs')
+          node (Join-Path $artifact 'cli-smoke.mjs') --docs
+          pnpm remove onerouter
+          if (Test-Path 'node_modules/onerouter') { throw 'Package was not removed' }
 
   alpine:
     name: Clean node:24-alpine install
