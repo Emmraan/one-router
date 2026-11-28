@@ -39,9 +39,10 @@ export async function serveApplication(options: {
   });
   let api: ReturnType<typeof createApp> | undefined;
   const checkHost = loopbackHosts.has(host.toLowerCase()) || host === '::1';
+  const proxyHosts = new Set(env.allowedOrigins.map((origin) => new URL(origin).host));
   const server = createServer(getRequestListener((request) => {
     const url = new URL(request.url);
-    if (checkHost && !loopbackHosts.has(url.hostname)) {
+    if (checkHost && !loopbackHosts.has(url.hostname) && !proxyHosts.has(url.host)) {
       return new Response(null, { status: 421, headers: { 'Cache-Control': 'no-store' } });
     }
     if (!api) return new Response(null, { status: 503, headers: { 'Cache-Control': 'no-store' } });

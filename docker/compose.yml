@@ -1,0 +1,37 @@
+services:
+  one-router:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    init: true
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - one-router-data:/data
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  minio:
+    profiles: [minio]
+    image: cgr.dev/chainguard/minio:latest-dev@sha256:ac762bc1dde2a925364117c7c0974b4b8dd720b9427c5f86ff7442823d25bd73
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        : "$${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in docker/.env}"
+        : "$${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in docker/.env}"
+        exec /usr/bin/minio "$$@"
+      - minio-entrypoint
+    command: [server, /data]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+
+volumes:
+  one-router-data:
+    name: one-router-data
+  minio-data:

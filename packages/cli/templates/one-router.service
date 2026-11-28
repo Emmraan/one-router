@@ -1,0 +1,26 @@
+[Unit]
+Description=ONE ROUTER AI chat and gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Create the one-router system user/group and adjust this path for a non-default npm prefix.
+User=one-router
+Group=one-router
+ExecStart=/usr/local/bin/one-router serve --host 127.0.0.1 --port 3000 --no-open
+Environment=NODE_ENV=production ONE_ROUTER_DATA_DIR=/var/lib/one-router ONE_ROUTER_CONFIG=/etc/one-router/config.json
+EnvironmentFile=-/etc/one-router/one-router.env
+StateDirectory=one-router
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/one-router
+UMask=0077
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

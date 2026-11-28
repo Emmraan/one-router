@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadEnv, maxUploadBytes } from './env';
+import { loadEnv, loadVercelEnv, maxUploadBytes } from './env';
 
 const base = { NODE_ENV: 'development', ONE_ROUTER_DATA_DIR: 'C:/data/one-router' };
 
@@ -19,6 +19,27 @@ describe('server environment', () => {
     expect(env.production).toBe(true);
     expect(env.allowedOrigins).toEqual([]);
     expect(env.storage).toBe('filesystem');
+  });
+
+  it('lets a production CLI use its local database and encrypted filesystem', () => {
+    const env = loadEnv({ ...base, NODE_ENV: 'production' }, { localDatabase: true });
+    expect(env.databaseUrl).toBe('file:C:/data/one-router/one-router.db');
+    expect(env.storage).toBe('filesystem');
+    expect(env.production).toBe(true);
+  });
+
+  it('requires remote database credentials and a deployment key on Vercel', () => {
+    const source = { TURSO_DATABASE_URL: 'libsql://example.turso.io', TURSO_AUTH_TOKEN: 'fixture-token',
+      ONE_ROUTER_ENCRYPTION_KEY: '5c'.repeat(32) };
+    expect(() => loadVercelEnv({ ...source, TURSO_DATABASE_URL: 'file:/tmp/db' })).toThrow('TURSO_DATABASE_URL');
+    expect(() => loadVercelEnv({ ...source, TURSO_AUTH_TOKEN: '' })).toThrow('TURSO_AUTH_TOKEN');
+    expect(() => loadVercelEnv({ ...source, ONE_ROUTER_ENCRYPTION_KEY: '' })).toThrow('ONE_ROUTER_ENCRYPTION_KEY');
+    const env = loadVercelEnv(source);
+    expect(env.production).toBe(true);
+    expect(env.storage).toBe('s3');
+    expect(env.s3).toBeUndefined();
+    expect(env.maxFileMb).toBe(4);
+    expect(env.maxTotalMb).toBe(4);
   });
 
   it('validates origins and numeric limits', () => {

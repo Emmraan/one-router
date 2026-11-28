@@ -1,10 +1,24 @@
-import { handle } from 'hono/vercel';
 import { createApp } from './app';
 import { bootstrapDatabase } from './bootstrap';
-import { loadEnv } from './env';
+import { loadVercelEnv } from './env';
 
-const env = loadEnv();
-const { db } = await bootstrapDatabase(env);
-const app = createApp({ db, env });
+async function start() {
+  const env = loadVercelEnv();
+  const { db } = await bootstrapDatabase(env, { requireInitialPassword: true });
+  return createApp({ db, env });
+}
 
-export default handle(app);
+let startup: Promise<Awaited<ReturnType<typeof start>> | undefined> | undefined;
+
+export async function vercelFetch(request: Request): Promise<Response> {
+  startup ??= start().catch(() => {
+    startup = undefined;
+    console.error('ONE ROUTER startup failed; check Turso, encryption key and first-owner settings.');
+    return undefined;
+  });
+  const app = await startup;
+  if (app) return app.fetch(request);
+  return Response.json({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Service unavailable' } }, {
+    status: 503, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
+  });
+}

@@ -5,10 +5,11 @@ import { hashPassword } from './crypto/password';
 import { identityRepositories } from './repositories/identity';
 import { users } from './schema/tables';
 
-export async function seedOwner(store: Store, options: { password?: string } = {}) {
+export async function seedOwner(store: Store, options: { password?: string; requirePassword?: boolean } = {}) {
   const find = async () => (await store.orm.select({ id: users.id }).from(users).where(eq(users.role, 'owner')).limit(1))[0];
   const existing = await find();
   if (existing) return { created: false, user: (await identityRepositories(store).users.get(existing.id))!, password: undefined };
+  if (options.requirePassword && !options.password) throw new Error('INITIAL_PASSWORD is required to create the owner');
   const password = options.password ?? randomBytes(24).toString('base64url');
   const now = Date.now();
   const id = randomUUID();

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { get } from 'node:http';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -72,6 +73,15 @@ function request(origin, path, { body, cookie, ...options } = {}) {
   });
 }
 
+function healthWithHost(origin, host) {
+  return new Promise((resolve, reject) => {
+    get(`${origin}/health`, { headers: { Host: host }, signal: AbortSignal.timeout(15000) }, (response) => {
+      response.resume();
+      resolve(response.statusCode);
+    }).once('error', reject);
+  });
+}
+
 async function login(url, password, mustChange) {
   const response = await request(url, '/api/auth/login', { body: { password } });
   assert.equal(response.status, 200, 'Owner login failed');
@@ -108,6 +118,7 @@ try {
   const bootstrap = app.stdout.match(/Bootstrap owner password \(sensitive\): ([^\r\n]+)/)?.[1];
   assert.ok(bootstrap, 'Missing generated bootstrap password');
   assert.deepEqual(await (await request(app.url, '/health')).json(), { status: 'ok', version, database: 'ok' });
+  assert.equal(await healthWithHost(app.url, 'unexpected.example'), 421);
   for (const path of ['/', '/login/', '/change-password/']) {
     const response = await request(app.url, path);
     assert.equal(response.status, 200);
@@ -133,7 +144,10 @@ try {
   assert.equal((await (await request(app.url, '/api/auth/status', { cookie: session })).json()).authenticated, false);
   await stop(app);
 
-  const silent = await start(['--api-only', '--port', String(Number(new URL(app.url).port))]);
+  const silent = await start(['--api-only', '--port', String(Number(new URL(app.url).port))], {
+    ONE_ROUTER_ALLOWED_ORIGINS: 'https://router.example.com',
+  });
+  assert.equal(await healthWithHost(silent.url, 'router.example.com'), 200);
   assert.ok(!silent.stdout.includes('Bootstrap owner password'), 'Restart printed a bootstrap password');
   assert.equal((await request(silent.url, '/')).status, 404);
   assert.equal((await request(silent.url, '/api/chat', { body: {} })).status, 404);

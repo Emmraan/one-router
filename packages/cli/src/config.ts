@@ -65,7 +65,7 @@ export async function runtimeConfig(version: string, overrides: { port?: number;
     const env = loadEnv({ ...settings, NODE_ENV: process.env.NODE_ENV, ONE_ROUTER_VERSION: version,
       ONE_ROUTER_DATA_DIR: resolve(settings.ONE_ROUTER_DATA_DIR?.trim() || homeDataDir),
       PORT: overrides.port?.toString() ?? (settings.PORT?.trim() || defaults.PORT),
-    });
+    }, { localDatabase: true });
     if (!settings.ONE_ROUTER_ALLOWED_ORIGINS?.trim()) env.allowedOrigins = [];
     return { host, env };
   } catch (error) {

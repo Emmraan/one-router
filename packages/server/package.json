@@ -7,7 +7,9 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./static-policy": "./src/static-policy.ts",
+    "./vercel": "./src/vercel.ts"
   },
   "scripts": {
     "dev": "tsx watch src/node.ts",
