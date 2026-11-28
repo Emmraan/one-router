@@ -15,7 +15,7 @@ No MVP tag, npm publication, or GitHub release has been created.
 | Vercel + Turso + S3 | Dedicated preview and secrets required. Missing credentials must fail, not skip. Preview verification pending. |
 | Runtime budgets | Latest local gate: 96,063,488 bytes (about 92 MiB) idle RSS, authenticated API p95 6.1 ms over 50 samples after 10 warmups. Ubuntu scratch budget job passed on the final revision. Local bootstrap is diagnostic only; Vercel cold start <=2 s still unverified. |
 | Audit / supply chain | Current audit: zero high/critical; one moderate esbuild development-server advisory, previously accepted. Lockfile changes accompany manifests. Installed lifecycle inventory found esbuild/unrs-resolver postinstall scripts; remaining dependency entries are prepare scripts, which registry installs do not execute. The first-party CLI prepack rebuilds after release versioning. Frozen CI install passed on the final revision. |
-| Security pass | Four high findings reproduced and fixed below (findings 1, 2, 7, and 8). Final CI passed on the newest revision; remaining adversarial areas still need final review. |
+| Security pass | Four high findings reproduced and fixed below (findings 1, 2, 7, and 8). Final adversarial review of the remaining checklist areas found no new high or critical issues; finding 11 is accepted as low. Final CI passed on the newest revision. |
 | Release automation | CLI-only semantic-release configuration; npm publish depends on NPM_TOKEN. Main-only workflow requires an explicit ready marker in this checklist and successful required check runs for the same revision, including hosted preview; skipped checks fail. Configuration/readiness tests passed, including rebuilding the CLI with the version written before packing. Actual release and scratch-job promotion still blocked. |
 | Live providers | Owner-run only, no live network in tests. OpenAI, Anthropic, Gemini, and Ollama smoke pending. |
 | Backup/restore | Shared suite checks portable encrypted archive merge restore. Whole-data-directory/Turso/S3 disaster recovery still needs owner sign-off. |
@@ -74,6 +74,8 @@ SC-19 is post-MVP and is not a release requirement.
 9. **Medium, fixed with owner approval: unbounded model discovery.** A discovery response with a false `Content-Length: 1` streamed more than 2 MiB and was still parsed; a response with 10,000 models succeeded. Discovery now reads actual bytes with fatal UTF-8 decoding, cancels at more than 2 MiB, and rejects more than 1,000 models instead of truncating. The owner approved both limits, and regression tests cover the lying length and the oversized model list. Final CI passed on the final revision.
 
 10. **Medium, fixed: SSE event data grew without an event separator.** A provider sending many short `data:` lines and no blank line accumulated an unbounded data array even though each line and the chunk buffer stayed under the existing limit. The parser now caps total data per event at the same 1 MiB limit and resets the count on dispatch. A regression test reproduces the separator-less growth. Final CI passed on the final revision.
+
+11. **Low, accepted: unauthenticated version disclosure.** `GET /health` returns the package version without a session. Reproduction: request `/health` and read `version`. The version is already public in the npm package and repository, and the response exposes no configuration, data path, or secret. Accepted as informational; no change.
 
 ## Dependency justification
 
