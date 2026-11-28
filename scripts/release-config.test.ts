@@ -7,6 +7,12 @@ describe('release configuration', () => {
     expect(cliManifest.scripts).toHaveProperty('prepack', 'node build.mjs');
   });
 
+  it('pushes the release commit and tag before creating the GitHub release', () => {
+    const names = createReleaseConfig(false).plugins.map((plugin) =>
+      Array.isArray(plugin) ? plugin[0] : plugin);
+    expect(names.indexOf('@semantic-release/git')).toBeLessThan(names.indexOf('@semantic-release/github'));
+  });
+
   it.each([false, true])('publishes only the CLI when npm credentials exist: %s', (hasNpmToken) => {
     const config = createReleaseConfig(hasNpmToken);
     expect(config.branches).toEqual(['main']);
