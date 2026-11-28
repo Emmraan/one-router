@@ -75,15 +75,32 @@ jobs:
 
   docker-lifecycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: bash scripts/docker-smoke.sh
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash scripts/docker-smoke.sh --browser-image onerouter-browser:verification
+      - name: Install Chromium for the production image browser suite
+        run: pnpm --filter @one-router/web exec playwright install --with-deps chromium
+      - name: Run the browser suite against the production Docker image
+        run: node scripts/e2e-tarball.mjs --docker onerouter-browser:verification
+      - name: Preserve Docker browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-browser-traces
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
   systemd:
     runs-on: ubuntu-latest

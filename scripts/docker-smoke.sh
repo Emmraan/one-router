@@ -23,6 +23,10 @@ printf 'INITIAL_PASSWORD=%s\n' "$INITIAL_PASSWORD" > docker/.env
 bash -ec "$(doc_command docker-start) --wait-timeout 90"
 container=$("${compose[@]}" ps -q one-router)
 image=$(docker inspect --format '{{.Image}}' "$container")
+if [[ ${1:-} == --browser-image ]]; then
+  [[ -n ${2:-} ]]
+  docker tag "$image" "$2"
+fi
 size=$(docker image inspect --format '{{.Size}}' "$image")
 echo "Image: $size uncompressed bytes"
 [[ $size -le 250000000 ]]
