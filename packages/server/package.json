@@ -22,7 +22,7 @@
     "@one-router/core": "workspace:*",
     "@one-router/db": "workspace:*",
     "aws4fetch": "1.0.20",
-    "hono": "4.13.22",
+    "hono": "4.13.23",
     "unpdf": "2.2.3",
     "zod": "4.6.7"
   },

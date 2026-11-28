@@ -1,0 +1,133 @@
+name: Phase 10 hardening verification
+
+on:
+  push:
+    branches: [phase-10-hardening]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'docker/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'release.config.mjs'
+      - '.github/workflows/scratch-phase-10.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hardening-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  budget-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=onerouter
+      - run: pnpm budget:runtime
+
+  e2e-tarball:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=onerouter
+      - name: Exercise the packed artifact in a clean Node 24 container
+        run: |
+          mkdir -p "$RUNNER_TEMP/target"
+          pnpm -C packages/cli pack --pack-destination "$RUNNER_TEMP/target"
+          cp scripts/{target-smoke,deployment-smoke}.mjs "$RUNNER_TEMP/target/"
+          docker run --rm -v "$RUNNER_TEMP/target:/input:ro" node:24-alpine sh -ec '
+            mkdir /smoke && cd /smoke
+            corepack enable && corepack prepare pnpm@10.33.2 --activate
+            pnpm add /input/*.tgz
+            node /input/target-smoke.mjs /smoke/node_modules/onerouter/dist/index.js
+          '
+
+  docker-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bash scripts/docker-smoke.sh
+
+  systemd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=onerouter
+      - run: bash scripts/systemd-smoke.sh
+
+  vercel-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: deployment-preview
+    env:
+      VERCEL_TELEMETRY_DISABLED: '1'
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Require preview credentials, never count a skip as success
+        env:
+          INITIAL_PASSWORD: ${{ secrets.VERCEL_INITIAL_PASSWORD }}
+          OWNER_PASSWORD: ${{ secrets.VERCEL_SMOKE_OWNER_PASSWORD }}
+        run: |
+          if [[ -z "$VERCEL_ORG_ID" || -z "$VERCEL_PROJECT_ID" || -z "$VERCEL_TOKEN" || -z "$INITIAL_PASSWORD" || -z "$OWNER_PASSWORD" ]]; then
+            echo '::error::Vercel preview is unverified: configure the deployment-preview secrets. Release is blocked.'
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build the dedicated preview project
+        run: |
+          pnpm dlx vercel@68.0.0 pull --yes --environment=preview --token "$VERCEL_TOKEN"
+          pnpm dlx vercel@68.0.0 build --token "$VERCEL_TOKEN"
+      - name: Deploy and run the shared suite against Turso and S3
+        env:
+          INITIAL_PASSWORD: ${{ secrets.VERCEL_INITIAL_PASSWORD }}
+          OWNER_PASSWORD: ${{ secrets.VERCEL_SMOKE_OWNER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          address=$(pnpm dlx vercel@68.0.0 deploy --prebuilt --yes --token "$VERCEL_TOKEN")
+          node scripts/deployment-smoke.mjs preview "$address"

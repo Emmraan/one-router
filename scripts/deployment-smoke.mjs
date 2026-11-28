@@ -45,9 +45,9 @@ function session(response) {
   assert.ok(value, 'Missing session cookie');
   if (mode !== 'baseline') {
     assert.ok(/;\s*Secure(?:;|$)/i.test(value), 'Cookie must be Secure');
-    assert.ok(/;\s*HttpOnly(?:;|$)/i.test(value), 'Cookie must be HttpOnly');
-    assert.ok(/;\s*SameSite=Lax(?:;|$)/i.test(value), 'Cookie must be SameSite=Lax');
   }
+  assert.ok(/;\s*HttpOnly(?:;|$)/i.test(value), 'Cookie must be HttpOnly');
+  assert.ok(/;\s*SameSite=Lax(?:;|$)/i.test(value), 'Cookie must be SameSite=Lax');
   return value.split(';')[0];
 }
 
@@ -99,11 +99,49 @@ async function checkAttachment(cookie) {
   }
 }
 
+async function checkArchive(cookie) {
+  const passphrase = 'Deployment smoke archive!67';
+  const exported = await expectResponse('/api/data/export', 200, { cookie, body: { passphrase } });
+  assert.equal(exported.headers.get('cache-control'), 'no-store');
+  const bytes = await exported.arrayBuffer();
+  assert.ok(bytes.byteLength > 0);
+  for (const path of ['/api/data/preview', '/api/data/import']) {
+    const body = new FormData();
+    body.set('file', new File([bytes], 'smoke.onerouter', { type: 'application/octet-stream' }));
+    body.set('passphrase', passphrase);
+    if (path.endsWith('/import')) body.set('mode', 'merge');
+    const response = await expectResponse(path, 200, { cookie, body });
+    assert.ok((await response.json()).manifest, 'Archive response must include its validated manifest');
+  }
+}
+
+async function exerciseOwner(cookie) {
+  const page = await expectResponse('/login/', 200);
+  const policy = page.headers.get('content-security-policy') ?? '';
+  assert.match(policy, /script-src 'self' 'sha256-/);
+  assert.ok(!policy.split(';').find((directive) => directive.trim().startsWith('script-src'))?.includes("'unsafe-inline'"));
+  assert.equal(page.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(page.headers.get('cache-control'), 'no-store');
+  await expectResponse('/v1/models', 401);
+  await expectResponse('/openapi.json', 200);
+  const id = await seed(cookie);
+  try {
+    await readMessage(cookie, id);
+    await checkAttachment(cookie);
+    await checkArchive(cookie);
+    await readMessage(cookie, id);
+    return id;
+  } catch (error) {
+    await request(`/api/chats/${id}`, { cookie, method: 'DELETE' }).catch(() => undefined);
+    throw error;
+  }
+}
+
 await ready();
 switch (mode) {
   case 'fresh':
   case 'baseline':
-    console.log(await seed(await firstLogin()));
+    console.log(await exerciseOwner(await firstLogin()));
     break;
   case 'persist':
     await readMessage(await login(OWNER_PASSWORD, false), chatId);
@@ -121,10 +159,9 @@ switch (mode) {
     const page = await expectResponse('/login/', 200);
     assert.match(page.headers.get('content-security-policy') ?? '', /script-src 'self' 'sha256-/);
     assert.match(page.headers.get('strict-transport-security') ?? '', /max-age=/);
-    const id = await seed(cookie);
+    const id = await exerciseOwner(cookie);
     try {
       await readMessage(cookie, id);
-      await checkAttachment(cookie);
     } finally {
       await expectResponse(`/api/chats/${id}`, 200, { cookie, method: 'DELETE' });
     }

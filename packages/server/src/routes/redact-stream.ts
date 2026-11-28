@@ -1,5 +1,5 @@
 import { encodeSse, SseParser } from '@one-router/core';
-import { redactSecrets } from '../errors';
+import { PROVIDER_ERROR_MESSAGE } from '../errors';
 
 function sanitize(data: string): string {
   let parsed: unknown;
@@ -11,7 +11,7 @@ function sanitize(data: string): string {
   if (!parsed || typeof parsed !== 'object') return data;
   const value = parsed as Record<string, unknown>;
   if (typeof value.error !== 'string') return data;
-  return JSON.stringify({ ...value, error: redactSecrets(value.error) });
+  return JSON.stringify({ error: PROVIDER_ERROR_MESSAGE });
 }
 
 export function redactEventStream(stream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
@@ -36,10 +36,10 @@ export function redactEventStream(stream: ReadableStream<Uint8Array>): ReadableS
         emit(controller, parser.push(decoder.decode()));
         emit(controller, parser.flush());
         controller.close();
-      } catch (error) {
+      } catch {
         try {
           controller.enqueue(encoder.encode(encodeSse({
-            error: redactSecrets(error instanceof Error ? error.message : 'Stream error'),
+            error: PROVIDER_ERROR_MESSAGE,
           })));
         } catch {
           // The client may already be gone.

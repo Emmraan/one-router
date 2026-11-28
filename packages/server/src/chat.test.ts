@@ -343,7 +343,8 @@ describe('model discovery', () => {
     expect(response.status).toBe(200);
     const payload = (await response.json()) as { success: boolean; error: string };
     expect(payload.success).toBe(false);
-    expect(payload.error).toContain('ECONNREFUSED');
+    expect(payload.error).toContain('Provider request failed');
+    expect(payload.error).not.toContain('ECONNREFUSED');
   });
 
   it('redacts secrets from discovery failures', async () => {
@@ -361,6 +362,6 @@ describe('model discovery', () => {
     const payload = (await response.json()) as { success: boolean; error: string };
     expect(payload.success).toBe(false);
     expect(payload.error).not.toContain('sk-secret1234567890');
-    expect(payload.error).toContain('[redacted]');
+    expect(payload.error).toContain('Provider request failed');
   });
 });

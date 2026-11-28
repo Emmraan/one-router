@@ -21,6 +21,10 @@ describe('static export hosting', () => {
     const page = await serve(new Request('http://localhost/'));
     expect(await page.text()).toContain('<script>hello()</script>');
     expect(page.headers.get('content-security-policy')).toMatch(/script-src 'self' 'sha256-[^']+';/);
+    const scriptPolicy = page.headers.get('content-security-policy')?.split(';').find((part) => part.trim().startsWith('script-src'));
+    expect(scriptPolicy).not.toContain("'unsafe-inline'");
+    expect(scriptPolicy).not.toContain("'unsafe-eval'");
+    expect(page.headers.get('cache-control')).toBe('no-store');
     expect(page.headers.get('x-content-type-options')).toBe('nosniff');
     const login = await serve(new Request('http://localhost/login', { method: 'HEAD' }));
     expect(login.status).toBe(200);
@@ -34,5 +38,13 @@ describe('static export hosting', () => {
     expect(asset.headers.get('cache-control')).toContain('immutable');
     expect(await asset.text()).toBe('hello()');
     expect((await serve(new Request('http://localhost/missing'))).status).toBe(404);
+  });
+
+  it('emits HSTS only for production hosting', async () => {
+    const production = await createStaticHandler(dir, true);
+    const local = await createStaticHandler(dir, false);
+    expect((await production(new Request('https://router.example/'))).headers.get('strict-transport-security'))
+      .toBe('max-age=31536000; includeSubDomains');
+    expect((await local(new Request('http://localhost/'))).headers.get('strict-transport-security')).toBeNull();
   });
 });

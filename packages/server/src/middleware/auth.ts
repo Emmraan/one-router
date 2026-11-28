@@ -49,7 +49,7 @@ export function createAuth(deps: AuthDeps) {
     const session = await repos.sessions.find(token, { now: deps.now() });
     if (!session) return null;
     if (deps.now() - session.lastSeenAt > touchIntervalMs) {
-      await repos.sessions.touch(token, { now: deps.now() });
+      await repos.sessions.touch(token, { now: deps.now(), ttlMs: deps.env.sessionDays * 86400000 });
       // The database expiry slides, so the browser cookie must slide with it.
       setSessionCookie(c, token, deps.env, deps.env.sessionDays * 86400000);
     }

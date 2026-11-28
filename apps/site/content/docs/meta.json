@@ -4,6 +4,6 @@
     "---Owner and data---", "authentication", "passwords", "database", "uploads", "import-export", "backup",
     "---Chat and API---", "providers", "gateway", "web-ui",
     "---Self-hosting---", "docker", "vps", "systemd", "vercel", "uninstall",
-    "---Reference---", "architecture", "troubleshooting", "faq", "development"
+    "---Reference---", "architecture", "security", "troubleshooting", "faq", "development"
   ]
 }

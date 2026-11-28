@@ -382,7 +382,7 @@ describe('request hygiene', () => {
     expect(response.status).toBe(401);
     const text = await response.text();
     expect(text).not.toContain('sk-secret1234567890');
-    expect(text).toContain('[redacted]');
+    expect(text).toContain('Provider request failed');
   });
 
   it('redacts upstream secrets inside streamed error events', async () => {
@@ -406,7 +406,7 @@ describe('request hygiene', () => {
     expect(response.status).toBe(200);
     const text = await response.text();
     expect(text).not.toContain('sk-secret1234567890');
-    expect(text).toContain('[redacted]');
+    expect(text).toContain('Provider request failed');
   });
 
   it('serves health and OpenAPI without a session', async () => {

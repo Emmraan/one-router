@@ -1,0 +1,42 @@
+---
+title: Security and headers
+description: Browser policies, HTTPS deployment, secret handling, and security limits.
+---
+
+## Browser policies
+
+The CLI serves the exported workspace with a Content Security Policy (CSP). Vercel emits the same page policy. Scripts are local; inline Next.js bootstrap scripts use a SHA-256 hash generated from each exported page. The script policy does not allow `unsafe-inline` or `unsafe-eval`. KaTeX, Mermaid, and syntax highlighting load from local dynamic chunks, not a CDN.
+
+The style policy permits inline styles for React layout, KaTeX, and Mermaid. This is a deliberate exception, not a claim that every CSP directive forbids `unsafe-inline`.
+
+Responses include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a permissions policy disabling camera, microphone, and geolocation. API responses have a deny-by-default CSP rather than the HTML page policy.
+
+## Caching
+
+Workspace HTML and authenticated API responses use `Cache-Control: no-store`. Fingerprinted assets under `/_next/static/` use a one-year immutable public cache. Do not configure a reverse proxy or CDN to override the API cache policy. Keep streamed responses unbuffered; the backend sends `X-Accel-Buffering: no`.
+
+## HTTPS and proxies
+
+Production responses emit `Strict-Transport-Security: max-age=31536000; includeSubDomains`. Local development does not. HSTS only takes effect after a browser receives it over HTTPS; it does not provide TLS or secure an HTTP deployment by itself. Only use `includeSubDomains` when all subdomains support HTTPS.
+
+Use the [VPS proxy setup](/docs/vps/) or [Vercel deployment](/docs/vercel/), and keep the backend inaccessible from the public network when using a proxy. The proxy must preserve the public host and replace client-supplied forwarding headers. List allowed browser origins explicitly. Production cookies use `Secure`, `HttpOnly`, and `SameSite=Lax`. Mutating cookie-authenticated requests require an allowed or same-host origin, or a same-origin Fetch Metadata header. Bearer clients authenticate separately.
+
+## Passwords and provider failures
+
+Passwords use scrypt. Login attempts are account-locked in the database after repeated failures, with an additional best-effort per-process address throttle. Login and password-change work share a single in-flight admission slot per server instance to bound memory use. Concurrent requests receive `429` and may retry after one second. Serverless instances do not share that admission slot or the in-memory address counters.
+
+Provider error text is not forwarded to the browser or gateway. An upstream response or thrown error can contain a key in an arbitrary format; pattern-based redaction alone is not sufficient. Public failures retain an error code and HTTP status where available, with a fixed message. See [troubleshooting](/docs/troubleshooting/) for configuration checks.
+
+## Storage and limits
+
+Provider keys and application records are encrypted at rest. Keep the encryption key separate from an off-device backup; possession of both defeats that protection. Encrypted exports include provider keys; plaintext exports omit them. See [backup and restore](/docs/backup/) and [import and export](/docs/import-export/).
+
+Uploads pass through the backend for validation and encryption. Body readers enforce actual byte limits even if `Content-Length` is missing or false. Provider calls have deadlines and do not follow redirects. Private, metadata, and non-HTTP literal provider URLs are blocked, with an explicit localhost exception for Ollama.
+
+Hostname validation does not pin DNS resolution. An owner-controlled public hostname can resolve to a private address. Treat provider configuration as trusted owner input and enforce outbound network restrictions when the server can reach sensitive internal services. This limitation is not a complete SSRF defense.
+
+## Dependency checks
+
+CI installs the committed pnpm lockfile with frozen resolution. The audit reports all severities and blocks high or critical advisories. Do not approve dependency build scripts merely to silence an install warning. Review dependency, lifecycle-script, and lockfile changes together before a release.
+
+ONE ROUTER is a single-owner service. It does not replace a firewall, reverse-proxy request limits, or controls on provider spending. Live provider verification and real TLS deployment checks are separate from fixture-based tests.

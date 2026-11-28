@@ -1,5 +1,5 @@
 import { encodeSse, SseParser } from '@one-router/core';
-import { HttpError, redactSecrets } from '../errors';
+import { HttpError, PROVIDER_ERROR_MESSAGE } from '../errors';
 
 function eventText(data: string): string {
   let parsed: unknown;
@@ -11,7 +11,7 @@ function eventText(data: string): string {
   if (!parsed || typeof parsed !== 'object') return '';
   const value = parsed as { text?: unknown; error?: unknown };
   if (typeof value.error === 'string') {
-    throw new HttpError(502, redactSecrets(value.error), 'UPSTREAM_ERROR');
+    throw new HttpError(502, PROVIDER_ERROR_MESSAGE, 'UPSTREAM_ERROR');
   }
   return typeof value.text === 'string' ? value.text : '';
 }
@@ -62,11 +62,11 @@ export function openAiStream(stream: ReadableStream<Uint8Array>, options: {
         }
         chunk({}, 'stop');
         done();
-      } catch (error) {
+      } catch {
         try {
           controller.enqueue(encoder.encode(encodeSse({
             error: {
-              message: error instanceof Error ? redactSecrets(error.message) : 'Upstream stream error',
+              message: PROVIDER_ERROR_MESSAGE,
               type: 'one_router_error',
             },
           })));

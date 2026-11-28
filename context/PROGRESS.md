@@ -12,6 +12,7 @@
 | 7 | merged | phase-7-cli |
 | 8 | merged | phase-8-deployment |
 | 9 | merged | phase-9-landing-docs |
+| 10 | in progress; release blocked | phase-10-hardening |
 
 ## Phase 0 - Workspace, gates, CI
 

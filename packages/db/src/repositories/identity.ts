@@ -75,11 +75,13 @@ export function identityRepositories(store: Store) {
           .where(and(eq(sessions.tokenHash, hash), gt(sessions.expiresAt, now))).limit(1);
         return row ?? null;
       },
-      async touch(token: string, options: { now?: number } = {}) {
+      async touch(token: string, options: { now?: number; ttlMs?: number } = {}) {
         const hash = tokenHash(token);
         if (!hash) return;
         const now = timeSchema.parse(options.now ?? Date.now());
-        await store.orm.update(sessions).set({ lastSeenAt: now, expiresAt: now + sessionTtl })
+        const ttl = options.ttlMs ?? sessionTtl;
+        if (!Number.isSafeInteger(ttl) || ttl < 1 || ttl > 365 * 86400000) throw new Error('Invalid session lifetime');
+        await store.orm.update(sessions).set({ lastSeenAt: now, expiresAt: now + ttl })
           .where(and(eq(sessions.tokenHash, hash), gt(sessions.expiresAt, now)));
       },
       async revoke(token: string) {

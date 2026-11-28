@@ -1,6 +1,8 @@
 import { isCoreError } from '@one-router/core';
 import { ZodError } from 'zod';
 
+export const PROVIDER_ERROR_MESSAGE = 'Provider request failed. Check the provider configuration and try again.';
+
 export class HttpError extends Error {
   readonly status: number;
   readonly code: string;
@@ -51,11 +53,14 @@ export interface MappedError {
 
 export function mapError(error: unknown): MappedError {
   if (error instanceof HttpError) {
-    return { status: error.status, code: error.code, message: publicMessage(error.message), details: error.details };
+    return { status: error.status, code: error.code,
+      message: error.code.startsWith('UPSTREAM_') ? PROVIDER_ERROR_MESSAGE : publicMessage(error.message), details: error.details };
   }
   if (isCoreError(error)) {
     const status = error.status >= 400 && error.status <= 599 ? error.status : 500;
-    return { status, code: error.code, message: publicMessage(error.message) };
+    // Provider-controlled text can contain credentials of any format, not just known key prefixes.
+    return { status, code: error.code,
+      message: error.code.startsWith('UPSTREAM_') ? PROVIDER_ERROR_MESSAGE : publicMessage(error.message) };
   }
   if (error instanceof ZodError) {
     const details = error.issues.slice(0, 20).map((issue) => {
