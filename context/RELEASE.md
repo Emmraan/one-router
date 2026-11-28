@@ -7,20 +7,20 @@ No MVP tag, npm publication, or GitHub release has been created.
 
 | Check | Evidence / remaining work |
 |---|---|
-| Full phase gate | Local gates passed on the code revision: 691 tests, lint (three existing warnings), typecheck, build, JS 188.1 KB gzip, CSS 7.1 KB, audit gate, docs check, shared target smoke. Code/workflow revision 8b4e527: CI 46166869403 passed quality on Node 24 and 26, integration, E2E, visual, and web budget; CLI package 46166869447 passed. This checklist edit is docs-only. |
-| Shared target suite | Built CLI and the packed tarball passed locally, including the five browser E2E tests against the packed CLI and a local provider stub. Release verification 46166869421 passed clean Node 24 tarball, Docker lifecycle, systemd, and runtime budgets; only hosted preview failed for missing credentials. The browser suite is now part of the permanent `e2e-tarball` job; CI evidence on the browser-suite revision is pending. |
-| OS conformance | CLI package 46166869447 passed Ubuntu, Windows, macOS, and Alpine on the code revision. |
-| Docker lifecycle and image | Release verification 46166869421 passed image/lifecycle checks. N-1 uses Phase 7 source until a previous image tag exists. |
-| systemd lifecycle | Release verification 46166869421 passed. Real VPS/TLS remains owner-declined and unverified. |
-| Vercel + Turso + S3 | Dedicated preview and secrets required. The GitHub `deployment-preview` environment needs `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `VERCEL_TOKEN`, `VERCEL_INITIAL_PASSWORD`, `VERCEL_SMOKE_OWNER_PASSWORD`, and optional `VERCEL_AUTOMATION_BYPASS_SECRET`; the Vercel project needs Turso, encryption, and S3 configuration. Missing credentials must fail, not skip. Preview verification pending. |
-| Runtime budgets | Latest local gate: 96,063,488 bytes (about 92 MiB) idle RSS, authenticated API p95 6.1 ms over 50 samples after 10 warmups. Release verification 46166869421 passed the Ubuntu budget job. Local bootstrap is diagnostic only; Vercel cold start <=2 s still unverified. |
-| Audit / supply chain | Current audit: zero high/critical; one moderate esbuild development-server advisory, previously accepted. Lockfile changes accompany manifests. Installed lifecycle inventory found esbuild/unrs-resolver postinstall scripts; remaining dependency entries are prepare scripts, which registry installs do not execute. The first-party CLI prepack rebuilds after release versioning. Frozen CI install passed in 46166869403. |
-| Security pass | Four high findings reproduced and fixed below (findings 1, 2, 7, and 8). Final adversarial review of the remaining checklist areas found no new high or critical issues; finding 11 is accepted as low. CI 46170061199 passed; release verification 46170061178 reproduced the Node 24 provider transport incompatibility below and remains blocked on hosted preview. |
+| Full phase gate | Latest full local gate passed: 692 tests, lint (three existing warnings), typecheck, build, JS 188.1 KB gzip, CSS 7.1 KB, audit gate, docs check, shared target smoke. Code/workflow revision c82df5c: CI 46172971823 passed quality on Node 24 and 26, integration, E2E, visual, and web budget; CLI package 46172971832 passed. This subsequent checklist edit is docs-only. |
+| Shared target suite | Release verification 46172971899 passed the clean Node 24 tarball, its five browser E2E tests, production Docker lifecycle and all five browser tests including fixture cleanup, systemd, and runtime budgets. Only hosted preview failed for missing credentials. The same browser files run against the local fixture server, packed CLI, and production Docker image with a local provider stub. |
+| OS conformance | CLI package 46172971832 passed Ubuntu, Windows, macOS, and Alpine on revision c82df5c. |
+| Docker lifecycle and image | Release verification 46172971899 passed image/build/lifecycle checks and all five production browser tests, including cleanup by the image user that owns the private attachment directories. N-1 uses Phase 7 source until a previous image tag exists. |
+| systemd lifecycle | Release verification 46172971899 passed. Real VPS/TLS remains owner-declined and unverified. |
+| Vercel + Turso + S3 | Release verification 46172971899 failed at the preview credential requirement. The GitHub `deployment-preview` environment needs `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `VERCEL_TOKEN`, `VERCEL_INITIAL_PASSWORD`, `VERCEL_SMOKE_OWNER_PASSWORD`, and optional `VERCEL_AUTOMATION_BYPASS_SECRET`; the Vercel project needs Turso, encryption, and S3 configuration. Missing credentials must fail, not skip. Preview verification pending. |
+| Runtime budgets | Latest local gate: 96,100,352 bytes (about 92 MiB) idle RSS, authenticated API p95 5.5 ms over 50 samples after 10 warmups. Release verification 46172971899 passed the Ubuntu budget job. Local bootstrap is diagnostic only; Vercel cold start <=2 s still unverified. |
+| Audit / supply chain | Current audit: zero high/critical; one moderate esbuild development-server advisory, previously accepted. Lockfile changes accompany manifests. Installed lifecycle inventory found esbuild/unrs-resolver postinstall scripts; remaining dependency entries are prepare scripts, which registry installs do not execute. The first-party CLI prepack rebuilds after release versioning. Frozen CI install passed in 46172971823. |
+| Security pass | Four high findings reproduced and fixed below (findings 1, 2, 7, and 8). Final adversarial review of the remaining checklist areas found no new high or critical issues; finding 11 is accepted as low. CI 46172971823 passed, and release verification 46172971899 passed the packed and production Docker browser suites with connection-time DNS validation retained. Hosted preview remains blocked. |
 | Release automation | CLI-only semantic-release configuration; npm publish depends on NPM_TOKEN. Main-only workflow requires an explicit ready marker in this checklist and successful required check runs for the same revision, including hosted preview; skipped checks fail. The release job checks out `main`, refuses to run if `main` moved past the verified triggering SHA, sets a commit identity, and pushes the changelog commit and tag before creating the GitHub release. Configuration/readiness tests passed, including rebuilding the CLI with the version written before packing. Verification jobs are now permanent, so the required checks exist on `main`. Actual release remains blocked on hosted and owner-run evidence. |
-| Provider transport compatibility | Packed browser verification reproduced provider 502s on Node 24: its bundled fetch rejected the installed Undici Agent with `invalid onRequestStart method`. Use fetch and Agent from the same installed Undici version, retaining connection-time DNS validation and manual redirects. The five browser tests failed before the fix and passed on Node 24 after it; 692 tests, changed-file lint/typecheck, and the CLI build also passed. CI rerun pending. |
+| Provider transport compatibility | Packed browser verification reproduced provider 502s on Node 24: its bundled fetch rejected the installed Undici Agent with `invalid onRequestStart method`. Use fetch and Agent from the same installed Undici version, retaining connection-time DNS validation and manual redirects. The five browser tests failed before the fix and passed on Node 24 after it; release verification 46172971899 passed both packed and production Docker browser suites. The 692-test gate and CLI build also passed. |
 | Live providers | Owner-run only, no live network in tests. OpenAI, Anthropic, Gemini, and Ollama smoke pending. |
-| Backup/restore | Shared suite checks portable encrypted archive merge restore. Whole-data-directory/Turso/S3 disaster recovery still needs owner sign-off. |
-| Upgrade / uninstall | Existing Docker and CLI scripts cover lifecycle, preserved data, and uninstall; CI 46166869403 and CLI 46166869447 passed on the code revision. Owner manual sign-off pending. |
+| Backup/restore | Shared suite checks portable encrypted archive merge restore. Stopped whole-data-directory backup and recovery into a second instance passed locally on Node 24 and 26 and in the clean Node 24 container in release verification 46172971899: restored chat/message, attachment bytes, and decrypted provider configuration with a masked key. Owner sign-off remains pending; hosted Turso/S3 disaster recovery is unverified. |
+| Upgrade / uninstall | Existing Docker and CLI scripts cover lifecycle, preserved data, and uninstall; CI 46172971823, CLI 46172971832, and Docker/systemd release verification 46172971899 passed. Owner manual sign-off pending. |
 | Landing | Layout/preview unchanged. Copy reviewed: npm remains explicitly unavailable until the first release; no unsupported hosted-verification claim was added. Provider docs now describe the loopback-only local Ollama exception. |
 
 ## Success criteria
@@ -34,22 +34,22 @@ Prior phase evidence is not a substitute for final release verification.
 | SC-3 | Web cutover E2E passed in CI. |
 | SC-4 | Four provider fixtures and gateway tests passed; owner-run live provider smoke pending. |
 | SC-5 | Vercel artifact previously verified; hosted Turso/S3 preview unverified. |
-| SC-6 | Docker volume lifecycle passed in release verification 46166869421. |
-| SC-7 | Archive tests and local shared-suite export/merge restore passed. |
+| SC-6 | Docker volume lifecycle and production browser tests passed in release verification 46172971899. |
+| SC-7 | Archive tests, shared-suite export/merge restore, and stopped whole-data-directory recovery passed locally and in the clean Node 24 container. |
 | SC-8 | Upload/storage fixtures and local text upload passed. Real S3 and the hosted target matrix are pending. |
 | SC-9 | Enhance fixture/browser tests passed in CI. |
 | SC-10 | Chat/temp-mode tests passed in CI. |
 | SC-11 | Windows visual baselines passed in CI. |
 | SC-12 | Network O assets shipped and previously checked. |
-| SC-13 | Full local hardening gate passed with 691 tests; CI 46166869403 passed on the code revision. |
+| SC-13 | Full local hardening gate passed with 692 tests; CI 46172971823 passed on revision c82df5c. |
 | SC-14 | Source-length/lint gate passed locally. |
 | SC-15 | CLI release configuration/readiness tested and guarded workflow added; actual release pending. |
 | SC-16 | Audit reports all severities and blocks high/critical; current audit passes. |
 | SC-17 | Minimal README/local SVG preview unchanged; build checks passed locally. |
 | SC-18 | Owner approved supported-major exceptions: TypeScript 7 is outside typescript-eslint's supported range (<6.1); eslint-plugin-react excludes ESLint 10; Node types follow the Node 24 target. Compatible patch/minor updates applied. Revisit when peers support the newer majors. |
-| SC-20 | Uninstall docs and CLI/Docker/systemd smoke passed in release verification 46166869421; owner manual sign-off pending. |
-| SC-21 | Shared HTTP suite passed for the tarball, Docker, and systemd targets in 46166869421. The five browser E2E tests also pass against the packed CLI locally and now run in the permanent `e2e-tarball` job; hosted preview pending. |
-| SC-22 | Docker lifecycle script retained; release verification 46166869421 passed on the code revision. |
+| SC-20 | Uninstall docs, CLI/package checks, and Docker/systemd lifecycle passed on revision c82df5c; owner manual sign-off pending. |
+| SC-21 | Release verification 46172971899 passed the shared HTTP suite for tarball, Docker, and systemd and the same five browser tests against packed CLI and production Docker. Fixture-server E2E passed in CI 46172971823. Hosted preview and its browser coverage remain pending. |
+| SC-22 | Docker lifecycle script retained; release verification 46172971899 passed on revision c82df5c. |
 | SC-23 | Docs build passed; 19 registered command blocks across 25 pages verified locally. |
 
 SC-19 is post-MVP and is not a release requirement.
