@@ -60,8 +60,15 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @one-router/web vercel-build
+      - name: Build with Vercel CLI using local project settings
+        env:
+          VERCEL_TELEMETRY_DISABLED: '1'
+        run: |
+          mkdir -p .vercel
+          cat > .vercel/project.json <<'JSON'
+          {"projectId":"prj_ci_fixture","orgId":"team_ci_fixture","settings":{"rootDirectory":"apps/web","nodeVersion":"24.x"}}
+          JSON
+          pnpm dlx vercel@68.0.0 build --standalone
       - name: Check the standalone function and public assets
         run: |
           output=apps/web/.vercel/output
