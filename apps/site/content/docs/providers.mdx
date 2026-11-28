@@ -9,7 +9,7 @@ Open **Providers** in the workspace. Pick OpenAI, Anthropic, Gemini, Ollama, or 
 
 ## Ollama
 
-For a local CLI instance, use `http://127.0.0.1:11434` with an Ollama model already downloaded. The endpoint is reached by the ONE ROUTER server, so `127.0.0.1` in Docker refers to the container and on a VPS refers to that host. Use a reachable private endpoint allowed by your deployment; do not open Ollama directly to the Internet.
+For a local CLI instance, use `http://127.0.0.1:11434` with an Ollama model already downloaded. The endpoint is reached by the ONE ROUTER server, so `127.0.0.1` in Docker refers to the container and on a VPS refers to that host. Local Ollama must be reachable on explicit loopback or `localhost`; private LAN addresses and hostnames resolving to them are rejected. In Docker, make Ollama reachable inside the application's network namespace. Do not open Ollama directly to the Internet.
 
 ## Model IDs and aliases
 

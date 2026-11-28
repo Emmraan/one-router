@@ -23,6 +23,7 @@ export interface ServerEnv {
   authToken?: string;
   allowedOrigins: string[];
   sessionDays: number;
+  trustProxy: boolean;
   maxFileMb: number;
   maxFiles: number;
   maxTotalMb: number;
@@ -136,6 +137,8 @@ export function loadEnv(
     throw new Error('ONE_ROUTER_AUTH_TOKEN must contain at least 16 characters');
   }
   const s3 = s3Config(source);
+  const trustProxy = optional(source.ONE_ROUTER_TRUST_PROXY)?.toLowerCase() ?? 'false';
+  if (!['true', 'false'].includes(trustProxy)) throw new Error('ONE_ROUTER_TRUST_PROXY must be true or false');
   const uploadLimit = vercel ? 4 : Infinity;
 
   return {
@@ -149,6 +152,7 @@ export function loadEnv(
     authToken,
     allowedOrigins: origins(source.ONE_ROUTER_ALLOWED_ORIGINS, production),
     sessionDays: integer(source.ONE_ROUTER_SESSION_DAYS, 30, 'ONE_ROUTER_SESSION_DAYS', 1, 365),
+    trustProxy: trustProxy === 'true',
     // Leave room for multipart headers within Vercel's function payload limit.
     maxFileMb: Math.min(decimal(source.ONE_ROUTER_MAX_FILE_MB, 10, 'ONE_ROUTER_MAX_FILE_MB', 1, 10), uploadLimit),
     maxFiles: integer(source.ONE_ROUTER_MAX_FILES, 10, 'ONE_ROUTER_MAX_FILES', 1, 100),

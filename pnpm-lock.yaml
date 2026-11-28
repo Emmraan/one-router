@@ -199,6 +199,9 @@ importers:
       '@libsql/client':
         specifier: 0.18.0
         version: 0.18.0
+      undici:
+        specifier: 8.14.0
+        version: 8.14.0
       unpdf:
         specifier: 2.2.3
         version: 2.2.3
@@ -274,6 +277,9 @@ importers:
       hono:
         specifier: 4.13.23
         version: 4.13.23
+      undici:
+        specifier: 8.14.0
+        version: 8.14.0
       unpdf:
         specifier: 2.2.3
         version: 2.2.3
@@ -5793,6 +5799,10 @@ packages:
   undici@7.30.2:
     resolution: {integrity: sha512-mLyPQnHwUxaM/rideoK/+KL8DaAJLRl4aBCfmX444aCSLnIaomqPLtNRe2jdCYcsk5wZzXrDIQC8ZeYNRAYyIA==}
     engines: {node: '>=20.18.1'}
+
+  undici@8.14.0:
+    resolution: {integrity: sha512-MqM6wqORYo0jb1WFUwFKZTFWFz6VeBMPj9op5Hq+RvlrQjISQCyLEfx5+/iqOLWC/LL1HliJ5t0NP1BgYpXeVQ==}
+    engines: {node: '>=22.19.0'}
 
   unicode-emoji-modifier-base@1.0.0:
     resolution: {integrity: sha512-yLSH4py7oFH3oG/9K+XWrz1pSi3dfUrWEnInbxMfArOfc1+33BlGPQtLsOYwvdMy11AwUBetYuaRxSPqgkq+8g==}
@@ -11842,6 +11852,8 @@ snapshots:
   undici@6.29.1: {}
 
   undici@7.30.2: {}
+
+  undici@8.14.0: {}
 
   unicode-emoji-modifier-base@1.0.0: {}
 

@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import { isIP } from 'node:net';
 
 interface Entry {
   count: number;
@@ -12,13 +13,17 @@ export interface RateLimiter {
 
 export function createRateLimiter(options: { windowMs: number; max: number; now: () => number }): RateLimiter {
   const entries = new Map<string, Entry>();
+  let nextCleanupAt = 0;
   return {
     check(key) {
       const now = options.now();
-      if (entries.size > 10_000) {
+      if (!entries.has(key) && entries.size >= 1000 && now >= nextCleanupAt) {
         for (const [name, entry] of entries) if (entry.resetAt <= now) entries.delete(name);
+        nextCleanupAt = now + 1000;
       }
       const current = entries.get(key);
+      // Do not evict a live counter: rotating addresses must not reset another limit.
+      if (!current && entries.size >= 1000) return { allowed: false, retryAfterSec: 1 };
       const entry = !current || current.resetAt <= now
         ? { count: 0, resetAt: now + options.windowMs }
         : current;
@@ -35,11 +40,14 @@ export function createRateLimiter(options: { windowMs: number; max: number; now:
   };
 }
 
-export function clientIp(c: Context): string {
+export function clientIp(c: Context, trustProxy = false): string {
+  // Fetch handlers lack an authenticated peer address; use one bucket unless explicitly behind a trusted proxy.
+  if (!trustProxy) return 'local';
   const forwarded = c.req.header('x-forwarded-for');
   if (forwarded) {
     const last = forwarded.split(',').at(-1)?.trim();
-    if (last) return last.slice(0, 100);
+    if (last && isIP(last)) return last;
   }
-  return (c.req.header('x-real-ip') ?? 'local').slice(0, 100);
+  const real = c.req.header('x-real-ip')?.trim();
+  return real && isIP(real) ? real : 'local';
 }

@@ -31,6 +31,7 @@ Set variables in the Vercel project and scope them to the right environment. Sta
 | `ONE_ROUTER_ENCRYPTION_KEY` | Stable 32-byte key encoded as hex or base64. Required on Vercel; supply it to every instance sharing a remote database. |
 | `ONE_ROUTER_AUTH_TOKEN` | Gateway bearer token. Generate it separately from the owner password. |
 | `ONE_ROUTER_SESSION_DAYS` | Owner session lifetime in days; defaults to 30. |
+| `ONE_ROUTER_TRUST_PROXY` | Defaults to `false`: forwarding headers cannot change throttle buckets. Set `true` only behind an exclusive trusted proxy that replaces forwarding headers; see [security](/docs/security/). |
 | `ONE_ROUTER_MAX_FILE_MB`, `ONE_ROUTER_MAX_FILES`, `ONE_ROUTER_MAX_TOTAL_MB` | Lower upload limits for your deployment. |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` | S3-compatible attachment storage; see [uploads](/docs/uploads/). |
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OLLAMA_BASE_URL` | Optional provider defaults. You can configure providers in the app. |

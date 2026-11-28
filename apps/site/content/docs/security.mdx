@@ -13,13 +13,15 @@ Responses include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `R
 
 ## Caching
 
-Workspace HTML and authenticated API responses use `Cache-Control: no-store`. Fingerprinted assets under `/_next/static/` use a one-year immutable public cache. Do not configure a reverse proxy or CDN to override the API cache policy. Keep streamed responses unbuffered; the backend sends `X-Accel-Buffering: no`.
+Workspace HTML and authenticated API responses use `Cache-Control: no-store`. SSE streams add `no-transform`. Fingerprinted assets under `/_next/static/` use a one-year immutable public cache. Do not configure a reverse proxy or CDN to override the API cache policy. Keep streamed responses unbuffered; the backend sends `X-Accel-Buffering: no`.
 
 ## HTTPS and proxies
 
 Production responses emit `Strict-Transport-Security: max-age=31536000; includeSubDomains`. Local development does not. HSTS only takes effect after a browser receives it over HTTPS; it does not provide TLS or secure an HTTP deployment by itself. Only use `includeSubDomains` when all subdomains support HTTPS.
 
 Use the [VPS proxy setup](/docs/vps/) or [Vercel deployment](/docs/vercel/), and keep the backend inaccessible from the public network when using a proxy. The proxy must preserve the public host and replace client-supplied forwarding headers. List allowed browser origins explicitly. Production cookies use `Secure`, `HttpOnly`, and `SameSite=Lax`. Mutating cookie-authenticated requests require an allowed or same-host origin, or a same-origin Fetch Metadata header. Bearer clients authenticate separately.
+
+Forwarding headers are ignored for throttling by default: requests share one per-instance bucket. Set `ONE_ROUTER_TRUST_PROXY=true` only when every request passes through a trusted proxy that replaces forwarding headers and the backend cannot be reached directly. The last valid `X-Forwarded-For` address, or `X-Real-IP`, then identifies the bucket. Each throttle stores at most 1,000 addresses; new addresses are rejected while that capacity is occupied, without evicting active counters.
 
 ## Passwords and provider failures
 
@@ -33,7 +35,7 @@ Provider keys and application records are encrypted at rest. Keep the encryption
 
 Uploads pass through the backend for validation and encryption. Body readers enforce actual byte limits even if `Content-Length` is missing or false. Provider calls have deadlines and do not follow redirects. Private, metadata, and non-HTTP literal provider URLs are blocked, with an explicit localhost exception for Ollama.
 
-Hostname validation does not pin DNS resolution. An owner-controlled public hostname can resolve to a private address. Treat provider configuration as trusted owner input and enforce outbound network restrictions when the server can reach sensitive internal services. This limitation is not a complete SSRF defense.
+Provider connections validate the DNS answer set inside the socket connector and pass only those validated addresses to the socket. A public hostname resolving to a private or metadata address is rejected, including mixed public/private answers. Every new connection repeats validation, so a later DNS answer cannot rebind to an internal service. Redirects remain disabled. The explicit localhost exception is only available to Ollama through the provider adapter. Outbound firewall restrictions remain useful defense in depth.
 
 ## Dependency checks
 

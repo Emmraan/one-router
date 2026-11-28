@@ -9,11 +9,13 @@
   "files": ["dist", "templates/one-router.service"],
   "scripts": {
     "build": "node build.mjs",
+    "prepack": "node build.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",
+    "undici": "8.14.0",
     "unpdf": "2.2.3"
   },
   "devDependencies": {

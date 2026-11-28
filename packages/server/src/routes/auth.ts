@@ -65,7 +65,7 @@ export function authRoutes(deps: AuthRouteDeps) {
   });
 
   app.post('/login', async (c) => {
-    const limit = deps.loginLimiter.check(clientIp(c));
+    const limit = deps.loginLimiter.check(clientIp(c, deps.env.trustProxy));
     if (!limit.allowed) rateLimited(c, limit.retryAfterSec);
     const { password } = await readJson(c, loginSchema, 8 * 1024);
     // A slow request body must not reserve the password-work slot.
@@ -83,7 +83,7 @@ export function authRoutes(deps: AuthRouteDeps) {
       }
 
       await repos.users.clearFailedLogins(owner.id);
-      deps.loginLimiter.reset(clientIp(c));
+      deps.loginLimiter.reset(clientIp(c, deps.env.trustProxy));
       const ttlMs = deps.env.sessionDays * 86400000;
       const session = await repos.sessions.create(owner.id, { now: deps.now(), ttlMs });
       setSessionCookie(c, session.token, deps.env, ttlMs);
@@ -99,7 +99,7 @@ export function authRoutes(deps: AuthRouteDeps) {
   });
 
   app.post('/password', deps.auth.requireAuth(), async (c) => {
-    const limit = deps.passwordLimiter.check(clientIp(c));
+    const limit = deps.passwordLimiter.check(clientIp(c, deps.env.trustProxy));
     if (!limit.allowed) rateLimited(c, limit.retryAfterSec);
     const body = await readJson(c, passwordSchema, 8 * 1024);
     return runPasswordWork(c, async () => {
@@ -114,7 +114,7 @@ export function authRoutes(deps: AuthRouteDeps) {
       if (issues.length > 0) throw new HttpError(400, 'Password does not meet the policy', 'WEAK_PASSWORD', issues);
 
       await repos.users.setPassword(auth.userId, body.newPassword);
-      deps.passwordLimiter.reset(clientIp(c));
+      deps.passwordLimiter.reset(clientIp(c, deps.env.trustProxy));
       const ttlMs = deps.env.sessionDays * 86400000;
       const session = await repos.sessions.create(auth.userId, { now: deps.now(), ttlMs });
       setSessionCookie(c, session.token, deps.env, ttlMs);

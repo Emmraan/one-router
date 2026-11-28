@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createReleaseConfig } from '../release.config.mjs';
+import cliManifest from '../packages/cli/package.json';
 
 describe('release configuration', () => {
+  it('rebuilds the CLI after semantic-release writes its version and before packing', () => {
+    expect(cliManifest.scripts).toHaveProperty('prepack', 'node build.mjs');
+  });
+
   it.each([false, true])('publishes only the CLI when npm credentials exist: %s', (hasNpmToken) => {
     const config = createReleaseConfig(hasNpmToken);
     expect(config.branches).toEqual(['main']);

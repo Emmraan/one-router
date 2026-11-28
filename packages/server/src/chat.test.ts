@@ -65,6 +65,7 @@ describe('chat streaming', () => {
     const response = await postChat(chatBody());
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/event-stream');
+    expect(response.headers.get('cache-control')).toBe('no-store, no-transform');
     const text = await response.text();
     expect(text).toContain('data: {"text":"Hel"}');
     expect(text).toContain('data: {"text":"lo"}');

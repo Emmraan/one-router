@@ -5,6 +5,34 @@ let context: TestContext | undefined;
 afterEach(async () => { await context?.close(); context = undefined; });
 
 describe('release hardening', () => {
+  it('ignores untrusted forwarding headers when counting unauthenticated attempts', async () => {
+    context = await createTestContext({ passwordChanged: true });
+    for (let i = 0; i < 11; i++) {
+      const response = await context.request('/api/auth/login', {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': `198.51.100.${i}` },
+        body: '{bad',
+      }, { auth: false });
+      expect(response.status).toBe(i < 10 ? 400 : 429);
+    }
+  });
+
+  it('fails closed when trusted-proxy address counters reach their capacity', async () => {
+    let now = Date.now();
+    context = await createTestContext({ passwordChanged: true, env: { trustProxy: true }, now: () => now });
+    for (let i = 0; i < 1001; i++) {
+      const response = await context.request('/api/auth/login', {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': `198.18.${Math.floor(i / 256)}.${i % 256}` },
+        body: '{bad',
+      }, { auth: false });
+      expect(response.status).toBe(i < 1000 ? 400 : 429);
+    }
+    now += 15 * 60 * 1000 + 1;
+    const response = await context.request('/api/auth/login', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '198.19.0.1' }, body: '{bad',
+    }, { auth: false });
+    expect(response.status).toBe(400);
+  });
+
   it('bounds simultaneous login work even when forwarding headers are forged', async () => {
     context = await createTestContext({ passwordChanged: true });
     const responses = await Promise.all(Array.from({ length: 3 }, (_, i) => context!.request('/api/auth/login', {

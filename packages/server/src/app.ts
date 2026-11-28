@@ -9,6 +9,7 @@ import { createRateLimiter } from './middleware/rate-limit';
 import { requestId } from './middleware/request-id';
 import { securityHeaders } from './middleware/security-headers';
 import { createFileStore } from './files/storage';
+import { safeProviderFetch } from './providers/safe-fetch';
 import { authRoutes } from './routes/auth';
 import { chatRoutes as chatCompletionRoutes } from './routes/chat';
 import { chatRoutes as chatDataRoutes } from './routes/chats';
@@ -28,6 +29,7 @@ import type { AppEnv, AppOptions } from './types';
 export function createApp(options: AppOptions) {
   const now = options.now ?? Date.now;
   const logger = options.logger ?? consoleLogger;
+  const providerFetch = options.fetch ?? safeProviderFetch;
   const fileStore = options.fileStore ?? createFileStore({ db: options.db, env: options.env, fetch: options.fetch });
   const auth = createAuth({ db: options.db, env: options.env, now });
   const loginLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10, now });
@@ -43,7 +45,8 @@ export function createApp(options: AppOptions) {
   app.use('*', async (c, next) => {
     await next();
     if (c.req.path.startsWith('/api') || c.req.path.startsWith('/v1')) {
-      c.header('Cache-Control', 'no-store');
+      const streaming = c.res.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream');
+      c.header('Cache-Control', streaming ? 'no-store, no-transform' : 'no-store');
     }
   });
 
@@ -61,15 +64,15 @@ export function createApp(options: AppOptions) {
   api.route('/settings', settingRoutes({ auth }));
   api.route('/files', fileRoutes({ env: options.env, auth, fileStore }));
   api.route('/data', dataRoutes({ db: options.db, auth, fileStore, now }));
-  api.route('/', chatCompletionRoutes({ env: options.env, auth, fileStore, fetch: options.fetch }));
-  api.route('/title', titleRoutes({ env: options.env, auth, fetch: options.fetch }));
-  api.route('/enhance', enhanceRoutes({ env: options.env, auth, fetch: options.fetch }));
-  api.route('/discovery', discoveryRoutes({ env: options.env, auth, fetch: options.fetch }));
+  api.route('/', chatCompletionRoutes({ env: options.env, auth, fileStore, fetch: providerFetch }));
+  api.route('/title', titleRoutes({ env: options.env, auth, fetch: providerFetch }));
+  api.route('/enhance', enhanceRoutes({ env: options.env, auth, fetch: providerFetch }));
+  api.route('/discovery', discoveryRoutes({ env: options.env, auth, fetch: providerFetch }));
   app.route('/api', api);
 
   const v1 = new Hono<AppEnv>();
   v1.use('*', auth.requireAuth());
-  v1.route('/', v1Routes({ env: options.env, auth, fetch: options.fetch, now }));
+  v1.route('/', v1Routes({ env: options.env, auth, fetch: providerFetch, now }));
   app.route('/v1', v1);
 
   app.onError(handleError);

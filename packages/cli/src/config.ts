@@ -6,7 +6,7 @@ import { configPath, homeDataDir } from './paths';
 
 const PUBLIC_SETTINGS = [
   'ONE_ROUTER_HOST', 'PORT', 'ONE_ROUTER_DATA_DIR', 'ONE_ROUTER_ALLOWED_ORIGINS',
-  'ONE_ROUTER_SESSION_DAYS', 'ONE_ROUTER_MAX_FILE_MB', 'ONE_ROUTER_MAX_FILES', 'ONE_ROUTER_MAX_TOTAL_MB',
+  'ONE_ROUTER_SESSION_DAYS', 'ONE_ROUTER_TRUST_PROXY', 'ONE_ROUTER_MAX_FILE_MB', 'ONE_ROUTER_MAX_FILES', 'ONE_ROUTER_MAX_TOTAL_MB',
   'S3_BUCKET', 'S3_REGION', 'S3_FORCE_PATH_STYLE',
 ];
 const PRIVATE_SETTINGS = new Set([
@@ -25,7 +25,7 @@ export function parseSettings(text: string): Settings {
     if (!json || typeof json !== 'object' || Array.isArray(json)) throw new Error();
     return Object.fromEntries(Object.entries(json).map(([key, value]) => {
       if (!KEYS.has(key) || (typeof value !== 'string' && typeof value !== 'number' &&
-        !(key === 'S3_FORCE_PATH_STYLE' && typeof value === 'boolean'))) throw new Error();
+        !(['S3_FORCE_PATH_STYLE', 'ONE_ROUTER_TRUST_PROXY'].includes(key) && typeof value === 'boolean'))) throw new Error();
       return [key, String(value)];
     }));
   } catch {

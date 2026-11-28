@@ -9,6 +9,7 @@ describe('server environment', () => {
     expect(env.databaseUrl).toContain('one-router.db');
     expect(env.allowedOrigins).toEqual(['http://localhost:3000', 'http://localhost:4000']);
     expect(env.sessionDays).toBe(30);
+    expect(env.trustProxy).toBe(false);
     expect(env.storage).toBe('sqlite');
     expect(env.maxFiles).toBe(10);
   });
@@ -43,6 +44,8 @@ describe('server environment', () => {
   });
 
   it('validates origins and numeric limits', () => {
+    expect(loadEnv({ ...base, ONE_ROUTER_TRUST_PROXY: 'true' }).trustProxy).toBe(true);
+    expect(() => loadEnv({ ...base, ONE_ROUTER_TRUST_PROXY: 'yes' })).toThrow('ONE_ROUTER_TRUST_PROXY');
     expect(() => loadEnv({ ...base, ONE_ROUTER_ALLOWED_ORIGINS: 'https://app.example.com/path' })).toThrow('origins');
     expect(() => loadEnv({ ...base, ONE_ROUTER_ALLOWED_ORIGINS: 'file:///etc/passwd' })).toThrow('origins');
     expect(() => loadEnv({ ...base, ONE_ROUTER_SESSION_DAYS: '0' })).toThrow('ONE_ROUTER_SESSION_DAYS');
