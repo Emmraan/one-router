@@ -9,6 +9,7 @@
 | 4 | merged | phase-4-web-cutover |
 | 5 | merged | phase-5-web-parity |
 | 6 | merged | phase-6-redesign |
+| 7 | merged | phase-7-cli |
 
 ## Phase 0 - Workspace, gates, CI
 
@@ -106,4 +107,15 @@
 - Accepted bounds: 1,000 preview units, 40 table columns, 20 rich blocks/equations, and 100 visible model results; refine search or copy/export full text. Complex diagram directives, sources, and escaped labels fall back to source.
 - Accepted: three existing compiler/image lint warnings and the moderate dev-server advisory; no development server ships in the static export. Prior script-CSP and provider-DNS limitations are unchanged.
 - Dependencies: KaTeX and Mermaid replace CDN renderers; highlight.js replaces regex highlighting; development-only Sharp generates brand rasters. No installed package or browser API supplied these capabilities.
+
+## Phase 7 - CLI
+
+- Work commit: 0825a4f; local `--no-ff` merge into `main`.
+- Gate: lint (three known warnings), typecheck, 634 tests, build and smoke, budget (184.4/220 KB JS, 6.9/50 KB CSS), audit (zero high or critical).
+- CI: runs 46125073464 and 46125073516 passed. The approximately 3.04 MB tarball installed on Windows, macOS, Ubuntu, and Node 24 Alpine. Smoke covers both bins, port fallback, UI/API-only serving, health, bootstrap, password change, reset, and session revocation.
+- Deviation: CI installs and invokes the tarball with pnpm under the repository package-manager rule. The registry command is pending publication.
+- Review findings:
+  1. Medium, fixed: an existing database initialized with the CRLF checkout of `0000_initial.sql` failed to open with the LF package. `packages/db/src/migrate.test.ts` applies the CRLF source, reopens with LF, and checks that SQL edits still fail. Accept the alternate line-ending hash only for the initial migration.
+  2. Low, accepted: the UI allows inline styles for React, KaTeX, and Mermaid. Inline Next scripts use hashes per page; the packaged Chromium login and first-password flow passed under that policy.
+- Dependency: esbuild bundles workspace TypeScript into a standalone ESM CLI with split chunks. The stdlib does not bundle; the audited moderate advisory concerns esbuild's development server, which this build does not use or ship.
 
