@@ -8,15 +8,15 @@ No MVP tag, npm publication, or GitHub release has been created.
 | Check | Evidence / remaining work |
 |---|---|
 | Full phase gate | Local gates passed on the final revision: 691 tests, lint (three existing warnings), typecheck, build, JS 188.1 KB gzip, CSS 7.1 KB, audit gate, docs check, shared target smoke. CI 46165166603 passed quality on Node 24 and 26, integration, E2E, visual, and web budget; CLI package 46165166616 passed. |
-| Shared target suite | Built CLI passed locally on the final revision. Scratch CI 46165166585 passed clean Node 24 tarball, Docker lifecycle, systemd, and runtime budgets. Hosted preview failed for missing credentials; rerun required. |
+| Shared target suite | Built CLI passed locally on the final revision. Run 46165166585 passed clean Node 24 tarball, Docker lifecycle, systemd, and runtime budgets. Those jobs are now promoted to permanent `release-verification.yml`; rerun on the promoted workflow required. Hosted preview failed for missing credentials. |
 | OS conformance | CLI package 46165166616 passed Ubuntu, Windows, macOS, and Alpine on the final revision. |
-| Docker lifecycle and image | Scratch CI 46165166585 passed image/lifecycle checks. N-1 uses Phase 7 source until a previous image tag exists. |
-| systemd lifecycle | Scratch CI 46165166585 passed. Real VPS/TLS remains owner-declined and unverified. |
+| Docker lifecycle and image | Run 46165166585 passed image/lifecycle checks. N-1 uses Phase 7 source until a previous image tag exists. |
+| systemd lifecycle | Run 46165166585 passed. Real VPS/TLS remains owner-declined and unverified. |
 | Vercel + Turso + S3 | Dedicated preview and secrets required. Missing credentials must fail, not skip. Preview verification pending. |
-| Runtime budgets | Latest local gate: 96,063,488 bytes (about 92 MiB) idle RSS, authenticated API p95 6.1 ms over 50 samples after 10 warmups. Ubuntu scratch budget job passed on the final revision. Local bootstrap is diagnostic only; Vercel cold start <=2 s still unverified. |
+| Runtime budgets | Latest local gate: 96,063,488 bytes (about 92 MiB) idle RSS, authenticated API p95 6.1 ms over 50 samples after 10 warmups. The Ubuntu budget job passed on the final revision and is now permanent. Local bootstrap is diagnostic only; Vercel cold start <=2 s still unverified. |
 | Audit / supply chain | Current audit: zero high/critical; one moderate esbuild development-server advisory, previously accepted. Lockfile changes accompany manifests. Installed lifecycle inventory found esbuild/unrs-resolver postinstall scripts; remaining dependency entries are prepare scripts, which registry installs do not execute. The first-party CLI prepack rebuilds after release versioning. Frozen CI install passed on the final revision. |
 | Security pass | Four high findings reproduced and fixed below (findings 1, 2, 7, and 8). Final adversarial review of the remaining checklist areas found no new high or critical issues; finding 11 is accepted as low. Final CI passed on the newest revision. |
-| Release automation | CLI-only semantic-release configuration; npm publish depends on NPM_TOKEN. Main-only workflow requires an explicit ready marker in this checklist and successful required check runs for the same revision, including hosted preview; skipped checks fail. Configuration/readiness tests passed, including rebuilding the CLI with the version written before packing. Actual release and scratch-job promotion still blocked. |
+| Release automation | CLI-only semantic-release configuration; npm publish depends on NPM_TOKEN. Main-only workflow requires an explicit ready marker in this checklist and successful required check runs for the same revision, including hosted preview; skipped checks fail. Configuration/readiness tests passed, including rebuilding the CLI with the version written before packing. Verification jobs are now permanent, so the required checks exist on `main`. Actual release remains blocked on hosted and owner-run evidence. |
 | Live providers | Owner-run only, no live network in tests. OpenAI, Anthropic, Gemini, and Ollama smoke pending. |
 | Backup/restore | Shared suite checks portable encrypted archive merge restore. Whole-data-directory/Turso/S3 disaster recovery still needs owner sign-off. |
 | Upgrade / uninstall | Existing Docker and CLI scripts cover lifecycle, preserved data, and uninstall; CI passed on the final revision. Owner manual sign-off pending. |
@@ -48,7 +48,7 @@ Prior phase evidence is not a substitute for final release verification.
 | SC-18 | Owner approved supported-major exceptions: TypeScript 7 is outside typescript-eslint's supported range (<6.1); eslint-plugin-react excludes ESLint 10; Node types follow the Node 24 target. Compatible patch/minor updates applied. Revisit when peers support the newer majors. |
 | SC-20 | Uninstall docs and CLI/Docker/systemd smoke passed in CI; owner manual sign-off pending. |
 | SC-21 | Shared HTTP suite passed for the tarball, Docker, and systemd targets; hosted preview pending. Full browser suite currently runs on local fixtures only. |
-| SC-22 | Docker lifecycle script retained; scratch CI passed on the final revision. |
+| SC-22 | Docker lifecycle script retained; run 46165166585 passed on the final revision, now in permanent verification. |
 | SC-23 | Docs build passed; 19 registered command blocks across 25 pages verified locally. |
 
 SC-19 is post-MVP and is not a release requirement.
@@ -86,7 +86,7 @@ SC-19 is post-MVP and is not a release requirement.
 ## Final sign-off
 
 - Required jobs must pass for the release revision. A skipped job is not green.
-- Promote proven scratch jobs into permanent CI and remove the scratch workflow.
+- Verification jobs are promoted to `release-verification.yml`; the scratch workflow is removed. Run them on the release revision.
 - Record the owner-run provider, backup/restore, upgrade, uninstall, and deployment outcomes without storing credentials.
 - Only after evidence and owner approval, change the status to `Status: Ready for release.`; the release workflow otherwise fails closed.
 - The owner approved fixing findings 4 to 6 and keeping supported compiler/linter majors; final verification is still required.

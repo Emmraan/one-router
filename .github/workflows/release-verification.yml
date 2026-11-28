@@ -1,18 +1,8 @@
-name: Phase 10 hardening verification
+name: Release verification
 
 on:
   push:
-    branches: [phase-10-hardening]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'scripts/**'
-      - 'docker/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'release.config.mjs'
-      - '.github/workflows/scratch-phase-10.yml'
+    branches: [main, 'phase-*']
   workflow_dispatch:
 
 permissions:
