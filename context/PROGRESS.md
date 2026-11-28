@@ -10,6 +10,7 @@
 | 5 | merged | phase-5-web-parity |
 | 6 | merged | phase-6-redesign |
 | 7 | merged | phase-7-cli |
+| 8 | merged | phase-8-deployment |
 
 ## Phase 0 - Workspace, gates, CI
 
@@ -119,3 +120,10 @@
   2. Low, accepted: the UI allows inline styles for React, KaTeX, and Mermaid. Inline Next scripts use hashes per page; the packaged Chromium login and first-password flow passed under that policy.
 - Dependency: esbuild bundles workspace TypeScript into a standalone ESM CLI with split chunks. The stdlib does not bundle; the audited moderate advisory concerns esbuild's development server, which this build does not use or ship.
 
+## Phase 8 - Docker, VPS, Vercel
+
+- Work commits: 22b0224 (deployment), e078d27 (pinned MinIO image), 6760b74 (scratch CI removal); local `--no-ff` merge into `main`.
+- Gate: lint (three known warnings), typecheck, 636 tests, build and smoke, budget (184.4/220 KB JS, 7.1/50 KB CSS), audit (zero high or critical).
+- CI: runs 46129689771, 46129689815, and 46129689818 passed the workspace and CLI checks, Docker lifecycle and MinIO readiness, Ubuntu systemd smoke, and Vercel CLI build and artifact checks.
+- Deviations: the upgrade test used an image built from Phase 7 source because no prior image tag exists. The owner requested removal of the phase-only workflow without adding its jobs to permanent CI; the smoke scripts remain.
+- Accepted: the hosted Vercel preview was skipped and deferred by the owner. Turso and S3 round trips and HTTPS session cookies remain unverified on Vercel.
