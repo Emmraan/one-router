@@ -42,7 +42,7 @@ test('static docs support search, section navigation and copying commands', asyn
   if (await toc.isVisible()) await toc.click();
   await page.getByRole('link', { name: 'Reset locally', exact: true }).filter({ visible: true }).last().click();
   await expect(page).toHaveURL(/#reset-locally$/);
-  await page.getByRole('figure').filter({ hasText: 'one-router user reset-password' })
+  await page.getByRole('figure').filter({ has: page.getByText('one-router user reset-password', { exact: true }) })
     .getByRole('button', { name: 'Copy Text', exact: true }).click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('one-router user reset-password');
   expect(external).toEqual([]);
