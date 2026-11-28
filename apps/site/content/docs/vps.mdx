@@ -1,0 +1,26 @@
+---
+title: VPS and HTTPS
+description: Serve ONE ROUTER through a reverse proxy on a Linux host.
+---
+
+## Choose a service
+
+Use [Docker Compose](/docs/docker/) or the [systemd unit](/docs/systemd/). Both listen on the host's loopback interface at port 3000 by default. Do not publish that backend port through the firewall.
+
+## Set up HTTPS
+
+1. Point a DNS name at the VPS and allow public web traffic only on ports 80 and 443.
+2. Set `ONE_ROUTER_ALLOWED_ORIGINS=https://router.example.com` in the service environment, replacing the hostname with your own, and restart ONE ROUTER.
+3. Install Caddy, add this site block to its Caddyfile, and reload Caddy. The domain must resolve to your VPS for certificate issuance.
+
+```text title="Caddyfile"
+router.example.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+Caddy preserves the original Host header by default. If you use Nginx instead, preserve Host, enable HTTPS, and disable proxy response buffering for streaming. Open the HTTPS origin and finish owner setup. Test that the browser stays on HTTPS and that replies arrive incrementally.
+
+## Maintain the host
+
+Restrict SSH access, install system updates, and [test backups](/docs/backup/). Give gateway tokens only to trusted clients. Provider usage is billed to the connected accounts.

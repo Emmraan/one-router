@@ -1,0 +1,14 @@
+---
+title: Database and encryption
+description: How ONE ROUTER stores data and what you need to recover it.
+---
+
+## Storage by target
+
+Local installs use `one-router.db` in the data directory. The CLI defaults to `.one-router` under your home directory. Docker places it under `/data`; the systemd unit uses `/var/lib/one-router`. Vercel requires a remote Turso database. Schema migrations run at startup; back up before upgrading.
+
+## Keys and passwords
+
+The owner password is hashed with scrypt. Server-side AES-GCM encryption covers provider keys, sensitive chat data, and attachments. The local encryption key lives in `encryption.key` unless supplied explicitly with `ONE_ROUTER_ENCRYPTION_KEY`. Database metadata can still reveal information, such as record counts and timestamps, so protect the entire database and storage location.
+
+The password and encryption key serve different purposes. Changing or resetting the owner password does not change the key. Keep a protected copy of the key separate from routine backups, and verify you can restore both.

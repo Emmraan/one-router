@@ -1,0 +1,22 @@
+---
+title: Overview
+description: Choose where to run ONE ROUTER and set up your owner account.
+---
+
+ONE ROUTER combines an AI chat workspace and an OpenAI-compatible gateway. You run it, connect your own providers, and manage one owner account.
+
+## Choose where to run it
+
+| | Local | VPS | Vercel |
+| --- | --- | --- | --- |
+| Install | [`npx onerouter`](/docs/quick-start/) after the first npm release; [build from source](/docs/installation/#build-from-source) now | [Compose start command](/docs/docker/#start-with-compose) or [systemd enable command](/docs/systemd/#enable-the-service) behind HTTPS | [Import the Git repository in Vercel](/docs/vercel/#configure-the-project) |
+| Database | Local libSQL (SQLite); optional Turso | Local libSQL (SQLite); optional Turso | Turso required |
+| Attachments | Encrypted SQLite BLOBs | Encrypted filesystem; optional S3-compatible bucket | S3-compatible bucket required for uploads |
+| First password | CLI prints a generated password once, or use `INITIAL_PASSWORD` | Set `INITIAL_PASSWORD`, or get the generated password from the service log | Set `INITIAL_PASSWORD` before the first request |
+| Reset | [CLI reset](/docs/passwords/#reset-locally) | [Docker reset](/docs/passwords/#reset-in-docker) or [systemd reset](/docs/passwords/#reset-on-a-vps) | [Run the CLI against Turso](/docs/passwords/#reset-on-vercel) |
+
+Running on your machine? Follow the [quick start](/docs/quick-start/). For a public host, read the [VPS checklist](/docs/vps/) or [Vercel setup](/docs/vercel/) before exposing the app.
+
+## Before storing data
+
+Change your initial password when prompted, and [back up your data and encryption key](/docs/backup/). Add a provider only after you can sign in with your new password.

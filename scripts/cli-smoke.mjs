@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { get } from 'node:http';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+const docsManifest = new URL('./docs-commands.json', import.meta.url);
+const docs = process.argv.includes('--docs') ? JSON.parse(await readFile(docsManifest, 'utf8')) : null;
+const gatewayToken = 'local-only-docs-fixture-token';
+
+function docCommand(id) {
+  return docs[id].command;
+}
 
 const installed = join(process.cwd(), 'node_modules', 'onerouter');
 const entry = join(installed, 'dist', 'index.js');
@@ -47,8 +55,8 @@ async function run(args, { input, ...extraEnv } = {}) {
   return result.stdout.trim();
 }
 
-async function start(args, extraEnv) {
-  const command = cli(['serve', '--no-open', ...args], extraEnv);
+async function start(args, extraEnv, base = ['serve', '--no-open']) {
+  const command = cli([...base, ...args], extraEnv);
   command.child.stdin.end();
   let stdout = '';
   const ready = new Promise((resolve) => {
@@ -101,10 +109,26 @@ const blocker = createServer();
 try {
   assert.equal(await run(['--version']), version);
   assert.match(await run(['--help']), /Usage: one-router/);
-  assert.equal(await run(['config', '--path']), config);
+  const configCommands = docs ? docCommand('cli-config').split('\n') : ['one-router config --path', 'one-router config --print'];
+  const cliArgs = (command) => {
+    assert.match(command, /^one-router [\w -]+$/);
+    return command.split(' ').slice(1);
+  };
+  if (docs) {
+    // Registry spellings are checked against the names in the installed tarball.
+    const { name, bin } = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
+    assert.equal(docCommand('npm-quick-start'), `npx ${name}`);
+    assert.equal(bin[name], bin['one-router']);
+    assert.equal(docCommand('npm-install'), `npm i -g ${name}\none-router --version`);
+    assert.equal(docCommand('npm-uninstall'), `npm uninstall -g ${name}`);
+    assert.match(await run(cliArgs(docCommand('cli-help'))), /Usage: one-router/);
+    await readFile(join(installed, 'README.md'));
+    await readFile(join(installed, 'LICENSE'));
+  }
+  assert.equal(await run(cliArgs(configCommands[0])), config);
   const fixtureSecret = 'config-test-only-secret';
   await writeFile(config, JSON.stringify({ OPENAI_API_KEY: fixtureSecret, PORT: 3000 }), { mode: 0o600 });
-  const printed = await run(['config', '--print']);
+  const printed = await run(cliArgs(configCommands[1]));
   assert.ok(!printed.includes(fixtureSecret), 'Config printed an API key');
   assert.equal(JSON.parse(printed).OPENAI_API_KEY, '[redacted]');
 
@@ -112,7 +136,9 @@ try {
   blocker.listen({ host: '127.0.0.1', port: 0 });
   await listening;
   const occupied = blocker.address().port;
-  const app = await start(['--port', String(occupied)]);
+  const sourceServe = docs ? docCommand('source-serve') : 'node packages/cli/dist/index.js serve --no-open';
+  assert.match(sourceServe, /^node packages\/cli\/dist\/index\.js /);
+  const app = await start(['--port', String(occupied)], { ONE_ROUTER_AUTH_TOKEN: gatewayToken }, sourceServe.split(' ').slice(2));
   assert.ok(Number(new URL(app.url).port) > occupied, 'CLI did not fall back to the next port');
   assert.match(app.stdout, /Data directory: /);
   const bootstrap = app.stdout.match(/Bootstrap owner password \(sensitive\): ([^\r\n]+)/)?.[1];
@@ -139,8 +165,20 @@ try {
     body: { currentPassword: bootstrap, newPassword: owner, confirmation: owner } })).status, 200);
   const session = await login(app.url, owner, false);
   assert.equal((await request(app.url, '/api/chats', { cookie: session })).status, 200);
+  if (docs) {
+    const windows = process.platform === 'win32';
+    const command = (windows ? docCommand('gateway-models-windows') : docCommand('gateway-models-posix'))
+      .replace('http://127.0.0.1:3000', app.url);
+    const output = execFileSync(windows ? 'powershell.exe' : 'bash', windows
+      ? ['-NoProfile', '-NonInteractive', '-Command', `${command} | ConvertTo-Json -Depth 10 -Compress`]
+      : ['-ec', command], { encoding: 'utf8', timeout: 15000, env: { ...process.env, ONE_ROUTER_AUTH_TOKEN: gatewayToken } });
+    const models = JSON.parse(output);
+    assert.equal(models.object, 'list');
+    assert.ok(Array.isArray(models.data));
+  }
   const reset = 'SmokeOwner-reset!53';
-  assert.match(await run(['user', 'reset-password', '--stdin'], { input: `${reset}\n` }), /Existing sessions were revoked/);
+  const resetCommand = docs ? docCommand('cli-reset') : 'one-router user reset-password';
+  assert.match(await run([...cliArgs(resetCommand), '--stdin'], { input: `${reset}\n` }), /Existing sessions were revoked/);
   assert.equal((await (await request(app.url, '/api/auth/status', { cookie: session })).json()).authenticated, false);
   await stop(app);
 

@@ -1,0 +1,14 @@
+---
+title: File uploads
+description: Upload limits, storage adapters, and where files go.
+---
+
+## Attach files in a chat
+
+The chooser accepts supported images, PDF, and text-based files, subject to the selected model's capabilities. Files go through ONE ROUTER before storage. The server enforces type, size, count, and aggregate limits. The default per-file limit outside Vercel is 10 MiB; Vercel uses a lower cap for request size.
+
+## Where attachments live
+
+Local CLI installs use encrypted SQLite BLOBs. The Docker and systemd setups use an encrypted filesystem by default. On Vercel, configure a private S3-compatible bucket to enable uploads. Use a dedicated key scoped to the bucket, set the region and endpoint as required by the vendor, and enable `S3_FORCE_PATH_STYLE` if it expects path-style requests. The [configuration reference](/docs/configuration/#variables-by-purpose) lists the variable names.
+
+If an upload fails, try a smaller file or a supported type, verify the model accepts the input, and check the server's storage configuration. Back up attachment storage along with the database and key.

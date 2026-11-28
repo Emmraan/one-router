@@ -5,6 +5,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig([
   globalIgnores([
     '**/.next/**',
+    'apps/site/.source/**',
     '**/.vercel/**',
     '**/out/**',
     '**/dist/**',

@@ -1,0 +1,21 @@
+{
+  "npm-quick-start": { "shell": "sh", "test": "cli", "command": "npx onerouter" },
+  "npm-install": { "shell": "sh", "test": "cli", "command": "npm i -g onerouter\none-router --version" },
+  "npm-uninstall": { "shell": "sh", "test": "cli", "command": "npm uninstall -g onerouter" },
+  "source-build": { "shell": "sh", "test": "workspace", "command": "pnpm install --frozen-lockfile\npnpm build" },
+  "source-serve": { "shell": "sh", "test": "cli", "command": "node packages/cli/dist/index.js serve --no-open" },
+  "cli-help": { "shell": "sh", "test": "cli", "command": "one-router --help" },
+  "cli-config": { "shell": "sh", "test": "cli", "command": "one-router config --path\none-router config --print" },
+  "cli-reset": { "shell": "sh", "test": "cli", "command": "one-router user reset-password" },
+  "docker-start": { "shell": "sh", "test": "compose", "command": "docker compose --env-file docker/.env -f docker/compose.yml up -d --build --wait" },
+  "docker-reset": { "shell": "sh", "test": "compose", "command": "docker compose --env-file docker/.env -f docker/compose.yml exec one-router one-router user reset-password" },
+  "docker-down": { "shell": "sh", "test": "compose", "command": "docker compose --env-file docker/.env -f docker/compose.yml down" },
+  "docker-purge": { "shell": "sh", "test": "compose", "command": "docker compose --env-file docker/.env -f docker/compose.yml down --volumes" },
+  "systemd-start": { "shell": "bash", "test": "systemd", "command": "sudo systemctl daemon-reload\nsudo systemctl enable --now one-router.service" },
+  "systemd-reset": { "shell": "bash", "test": "systemd", "command": "sudo systemd-run --wait --pty --collect --uid=one-router --gid=one-router --property=EnvironmentFile=/etc/one-router/one-router.env --setenv=ONE_ROUTER_DATA_DIR=/var/lib/one-router --setenv=ONE_ROUTER_CONFIG=/etc/one-router/config.json /usr/local/bin/one-router user reset-password" },
+  "systemd-stop": { "shell": "bash", "test": "systemd", "command": "sudo systemctl disable --now one-router.service" },
+  "gateway-models-posix": { "shell": "bash", "test": "cli", "variant": "gateway-models-windows", "command": "curl --fail --silent --show-error -H \"Authorization: Bearer $ONE_ROUTER_AUTH_TOKEN\" http://127.0.0.1:3000/v1/models" },
+  "gateway-models-windows": { "shell": "powershell", "test": "cli", "variant": "gateway-models-posix", "command": "Invoke-RestMethod -Uri http://127.0.0.1:3000/v1/models -Headers @{ Authorization = \"Bearer $env:ONE_ROUTER_AUTH_TOKEN\" }" },
+  "docs-dev": { "shell": "sh", "test": "workspace", "command": "pnpm install --frozen-lockfile\npnpm --filter @one-router/site dev" },
+  "dev-gates": { "shell": "sh", "test": "workspace", "command": "pnpm lint:changed\npnpm typecheck:changed\npnpm test:changed" }
+}

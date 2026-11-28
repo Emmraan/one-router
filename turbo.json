@@ -10,6 +10,11 @@
       "outputs": ["dist/**"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/core/src/**", "$TURBO_ROOT$/packages/db/src/**", "$TURBO_ROOT$/packages/server/src/**", "$TURBO_ROOT$/LICENSE"]
     },
+    "@one-router/site#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "out/**"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/package.json", "$TURBO_ROOT$/scripts/docs-commands.json"]
+    },
     "lint": {
       "outputs": []
     },

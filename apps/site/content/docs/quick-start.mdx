@@ -1,0 +1,26 @@
+---
+title: Quick start
+description: Start locally, sign in, and send your first message.
+---
+
+## Start the workspace
+
+Install Node.js <NodeVersion />. Once `onerouter` is published, run:
+
+```sh verify="npm-quick-start"
+npx onerouter
+```
+
+Until the npm release is available, follow [the Docker setup](/docs/docker/) or [run from source](/docs/installation/#build-from-source).
+
+## Sign in
+
+Open the URL printed in the terminal. The default is [http://127.0.0.1:3000](http://127.0.0.1:3000). Use the generated bootstrap password shown on first start. Choose a new password of at least 12 characters when prompted. Save it in a password manager.
+
+## Start a chat
+
+1. Open **Providers** from the sidebar.
+2. Choose a preset, supply credentials if needed, and add or discover models.
+3. Return to chat, select a model in the header, and send a message.
+
+If you have Ollama running already, see its [connection settings](/docs/providers/#ollama). When you have data you want to keep, [make a backup](/docs/backup/).

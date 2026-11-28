@@ -1,0 +1,23 @@
+---
+title: Vercel
+description: Deploy the workspace and Hono API with Turso and optional S3-compatible storage.
+---
+
+## Configure the project
+
+1. Import the [ONE ROUTER repository](https://github.com/Emmraan/one-router) into Vercel on a revision that includes the `apps/web` deployment adapter. Set **Root Directory** to `apps/web` and allow source files outside that directory so that pnpm can resolve workspace packages.
+2. Use Node.js <NodeVersion /> and let Vercel use the checked-in build configuration. The `vercel-build` script assembles the static UI and Hono function. The function and UI share one HTTPS origin.
+3. Provision a Turso database and its database token. Configure the values below before the first request. Use separate resources for production and preview.
+
+| Variable | Value |
+| --- | --- |
+| `TURSO_DATABASE_URL` | Your TLS-enabled Turso database URL. |
+| `TURSO_AUTH_TOKEN` | The token for that database. |
+| `ONE_ROUTER_ENCRYPTION_KEY` | A stable 32-byte random key in hex or base64. Store a backup before deploying. |
+| `INITIAL_PASSWORD` | A unique password of at least 12 characters for the first login. |
+
+## Finish setup
+
+Deploy, open the deployment's `/health` URL to check database connectivity, then open the workspace and change the initial password. After the owner is set up, remove `INITIAL_PASSWORD` from project settings and redeploy. The database survives new deployments.
+
+Uploads are off until you configure a private S3-compatible bucket and credentials using [the S3 settings](/docs/configuration/#variables-by-purpose). Local disk is not persistent on Vercel. For recovery, keep the Turso data, object storage, and key together in your [backup plan](/docs/backup/).

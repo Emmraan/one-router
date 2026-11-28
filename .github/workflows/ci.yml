@@ -29,6 +29,8 @@ jobs:
         node: [24, 26]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - uses: pnpm/action-setup@v4
         with:
@@ -53,6 +55,30 @@ jobs:
 
       - name: Build
         run: node scripts/ci-run.mjs pnpm build
+
+      - name: Documentation commands, links and anchors
+        run: pnpm docs:check
+
+      - name: Docs development commands
+        if: matrix.node == 24
+        shell: bash
+        run: |
+          doc_command() { node scripts/docs-command.mjs "$1"; }
+          source_build=$(doc_command source-build)
+          test "$source_build" = $'pnpm install --frozen-lockfile\npnpm build'
+          docs_dev=$(doc_command docs-dev)
+          test "$(head -n 1 <<< "$source_build")" = "$(head -n 1 <<< "$docs_dev")"
+          timeout 90s bash -ec "$(tail -n +2 <<< "$docs_dev")" > "$RUNNER_TEMP/site-dev.log" 2>&1 &
+          dev_pid=$!
+          trap 'kill "$dev_pid" 2>/dev/null || true' EXIT
+          if ! curl -fsS --retry 30 --retry-all-errors --retry-delay 1 --max-time 45 http://localhost:3001/docs/ -o "$RUNNER_TEMP/docs.html"; then
+            tail -40 "$RUNNER_TEMP/site-dev.log"
+            exit 1
+          fi
+          grep -q 'Overview' "$RUNNER_TEMP/docs.html"
+          kill "$dev_pid" 2>/dev/null || true
+          wait "$dev_pid" || true
+          bash -ec "$(doc_command dev-gates)" 2>&1 | tee .ci-logs/docs-changed-gates.log
 
       - name: Budget
         run: node scripts/ci-run.mjs pnpm budget

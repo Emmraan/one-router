@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="title description">
+  <title id="title">ONE ROUTER workspace</title>
+  <desc id="description">A chat in the desktop workspace switches from OpenAI to Ollama and displays a sample reply.</desc>
+  <style>
+    text { font: 14px 'Segoe UI', system-ui, sans-serif; fill: #f2f2f2; }
+    .muted { fill: #bcbcbc; font-size: 12px; }
+    .brand { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    .openai { opacity: 0; animation: first-model 8s infinite; }
+    .ollama { animation: next-model 8s infinite; }
+    .reply { animation: reply 8s infinite; }
+    @keyframes first-model { 0%, 24% { opacity: 1; } 28%, 100% { opacity: 0; } }
+    @keyframes next-model { 0%, 24% { opacity: 0; } 28%, 100% { opacity: 1; } }
+    @keyframes reply { 0%, 37% { opacity: 0; } 43%, 100% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+  </style>
+  <defs><clipPath id="frame"><rect x="1" y="1" width="798" height="358" rx="8"/></clipPath></defs>
+  <g clip-path="url(#frame)">
+    <path fill="#1f1f1f" d="M0 0h800v360H0z"/>
+    <path fill="#191919" d="M0 0h183v360H0z"/>
+    <path stroke="#3c3c3c" d="M183 0v360m0-308h617"/>
+    <circle cx="27" cy="26" r="9" fill="none" stroke="#8fc8ff" stroke-width="2"/>
+    <path fill="none" stroke="#8fc8ff" stroke-width="1.4" d="m21 28 6-7 6 7z"/>
+    <text class="brand" x="46" y="30">ONE ROUTER</text>
+    <rect x="13" y="53" width="157" height="32" rx="5" fill="#323232"/>
+    <text x="25" y="74">+ New chat</text>
+    <text class="muted" x="22" y="111">Search chats</text>
+    <text class="muted" x="22" y="146">Recent</text>
+    <text x="22" y="171">Weekend plans</text>
+    <text x="22" y="305">Providers</text>
+    <text x="22" y="335">Settings</text>
+    <g class="openai"><text x="211" y="22">gpt-4o</text><text class="muted" x="211" y="39">OpenAI</text></g>
+    <g class="ollama"><text x="211" y="22">llama3.2</text><text class="muted" x="211" y="39">Ollama</text></g>
+    <path fill="none" stroke="#bcbcbc" stroke-width="1.5" d="m289 23 4 4 4-4"/>
+    <rect x="675" y="10" width="103" height="31" rx="5" fill="#323232"/>
+    <text x="690" y="30">Temporary</text>
+    <rect x="465" y="83" width="291" height="45" rx="7" fill="#323232"/>
+    <text x="483" y="111">Plan a weekend with no screens.</text>
+    <g class="reply">
+      <circle cx="242" cy="166" r="11" fill="none" stroke="#8fc8ff" stroke-width="2"/>
+      <text x="267" y="171">Try a morning hike, an afternoon at the library,</text>
+      <text x="267" y="193">and a picnic with a friend.</text>
+    </g>
+    <rect x="224" y="256" width="533" height="76" rx="7" fill="#292929" stroke="#505050"/>
+    <text class="muted" x="240" y="280">Message your model…</text>
+    <text x="241" y="314">+</text>
+    <rect x="670" y="292" width="75" height="30" rx="5" fill="#24384c"/>
+    <text x="685" y="312">Submit</text>
+  </g>
+  <rect x="1" y="1" width="798" height="358" rx="8" fill="none" stroke="#474747"/>
+</svg>

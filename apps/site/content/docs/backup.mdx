@@ -1,0 +1,18 @@
+---
+title: Backup and restore
+description: Save data, attachments, and the encryption key before a failure or upgrade.
+---
+
+## Portable backup
+
+Use [Import and export](/docs/import-export/) for a portable workspace copy. Store the `.onerouter` archive and passphrase separately, and test importing into a separate instance before you rely on it.
+
+## Local SQLite, Docker, and VPS
+
+Stop ONE ROUTER before copying data. Back up the whole data directory or Docker volume, including the database, any SQLite sidecar files, and the local attachment directory. Save the matching `encryption.key` or externally supplied `ONE_ROUTER_ENCRYPTION_KEY`, and keep a protected copy of the deployment configuration. If using external object storage, snapshot or copy that bucket as well.
+
+To restore, stop the destination service and put the files back in the correct data location with the correct service ownership and permissions. Restore the original key and configuration before starting ONE ROUTER. For Docker, mount the restored volume at `/data`. Sign in and open a saved conversation and an attachment to verify the restore.
+
+## Turso and object storage
+
+Use Turso's backup and restore tools for the database. Back up the S3-compatible bucket independently if configured. Capture both stores at the same point while writes are paused when possible. Store the matching encryption key separately. Restore to isolated resources first, connect a test instance with the original key, and confirm you can read chats and attachments before switching traffic.

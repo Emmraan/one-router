@@ -1,0 +1,22 @@
+---
+title: Architecture
+description: How the static apps, Hono API, and encrypted persistence fit together.
+---
+
+## Request flow
+
+The browser loads a static Next.js and React workspace. Its same-origin requests reach Hono, which handles login, chats, settings, files, and the OpenAI-compatible gateway. Provider adapters normalize upstream model requests and streamed replies. The CLI serves the UI and API in one Node.js process; the Vercel target serves the static UI plus a Hono function.
+
+## Source layout
+
+| Path | Responsibility |
+| --- | --- |
+| `apps/web` | Workspace and deployment adapter |
+| `apps/site` | Landing, preview, and static documentation |
+| `packages/core` | Provider adapters and shared schemas |
+| `packages/db` | libSQL schema, migrations, encryption, and repositories |
+| `packages/server` | Hono application and storage adapters |
+| `packages/ui` | Shared workspace primitives and design tokens |
+| `packages/cli` | Published executable package, web assets, and service template |
+
+See [database and encryption](/docs/database/) for data paths and [configuration](/docs/configuration/) for environment variables.

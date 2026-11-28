@@ -1,0 +1,29 @@
+---
+title: CLI reference
+description: Start the app, initialize an owner, and inspect configuration with the CLI.
+---
+
+## Start and inspect
+
+```sh verify="cli-help"
+one-router --help
+```
+
+| Command / option | Effect |
+| --- | --- |
+| `init` | Creates the local database, encryption key, and owner. Supply `INITIAL_PASSWORD` for unattended setup. Running it again does not reset the owner. |
+| `serve` | Serves the web UI and API. Running the CLI without a command also starts the server. |
+| `serve --host` | Defaults to `127.0.0.1`. Keep this binding unless you deliberately expose it behind a trusted proxy or network. |
+| `serve --port` | Defaults to `3000`. If occupied, the CLI tries subsequent ports and prints the one it chose. |
+| `serve --no-open` | Avoids launching a browser. |
+| `serve --api-only` | Exposes the gateway and operational routes without the chat UI. |
+| `user reset-password` | Resets the owner password using the existing database and key. See [recovery](/docs/passwords/). |
+
+## Inspect configuration
+
+```sh verify="cli-config"
+one-router config --path
+one-router config --print
+```
+
+`--path` prints the active JSON path. `--print` redacts secrets. Use `config --edit` to open the file in your editor, or edit it yourself. See [configuration precedence](/docs/configuration/#local-cli).

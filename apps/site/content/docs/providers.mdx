@@ -1,0 +1,16 @@
+---
+title: Providers
+description: Add providers and models, and choose how they are routed.
+---
+
+## Connect a provider
+
+Open **Providers** in the workspace. Pick OpenAI, Anthropic, Gemini, Ollama, or an OpenAI-compatible endpoint; enter the API key if required; and add or discover models. Use the vendor's account and endpoint. Confirm you can send a normal chat before configuring gateway clients.
+
+## Ollama
+
+For a local CLI instance, use `http://127.0.0.1:11434` with an Ollama model already downloaded. The endpoint is reached by the ONE ROUTER server, so `127.0.0.1` in Docker refers to the container and on a VPS refers to that host. Use a reachable private endpoint allowed by your deployment; do not open Ollama directly to the Internet.
+
+## Model IDs and aliases
+
+For the gateway, use an ID listed by `/v1/models`, normally `provider/model`. A configured alias can be used in the same field, which lets your clients keep a stable name while you change the underlying model. Model capabilities and charges depend on the provider and model.

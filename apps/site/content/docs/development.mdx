@@ -1,0 +1,29 @@
+---
+title: Development
+description: Work on the static site, workspace, and gateway in the pnpm monorepo.
+---
+
+## Requirements
+
+Use Node.js <NodeVersion />, pnpm <PnpmVersion />, and a checkout of the repository. See [build from source](/docs/installation/#build-from-source) for the production build.
+
+## Run the docs locally
+
+From the repository root, install workspace dependencies and start the site:
+
+```sh verify="docs-dev"
+pnpm install --frozen-lockfile
+pnpm --filter @one-router/site dev
+```
+
+Open [http://localhost:3001/docs/](http://localhost:3001/docs/). The content lives under `apps/site/content/docs`. `pnpm --filter @one-router/site build` exports the landing and docs to `apps/site/out/`; a static host can serve that folder with directory index support. Search uses the exported index and runs in the browser.
+
+## Check changes
+
+```sh verify="dev-gates"
+pnpm lint:changed
+pnpm typecheck:changed
+pnpm test:changed
+```
+
+Use fixture providers and a temporary database in tests. For each new command block, add a `verify` ID, the exact command in `scripts/docs-commands.json`, and a test that references that ID. Add linked PowerShell and POSIX entries if their syntax differs, and run `pnpm docs:check` after building.

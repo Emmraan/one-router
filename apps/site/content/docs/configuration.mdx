@@ -1,0 +1,38 @@
+---
+title: Configuration
+description: Where to set environment variables and secrets on each target.
+---
+
+## Local CLI
+
+The default config is `.one-router/config.json` in your home directory. Set `ONE_ROUTER_CONFIG` to use a different JSON file and `ONE_ROUTER_DATA_DIR` to use a different data directory. Environment values override config-file keys. `--host` and `--port` override the corresponding values for that run.
+
+## Docker and VPS
+
+Copy `docker/.env.example` to `docker/.env` for Compose. For systemd, copy `.env.vps.example` to `/etc/one-router/one-router.env` and restrict it to the administrator. The templates show the defaults and optional Turso or object storage settings. For a reverse proxy, set `ONE_ROUTER_ALLOWED_ORIGINS` to the public `https://` origin and preserve the original Host header.
+
+## Vercel
+
+Set variables in the Vercel project and scope them to the right environment. Start with `.env.vercel.example`. Use separate databases, keys, and buckets for production and preview. See [Vercel setup](/docs/vercel/).
+
+## Variables by purpose
+
+| Target | Where to set values | Setup requirements |
+| --- | --- | --- |
+| Local | CLI config or your process environment | No variables required for a local database and generated password. |
+| Docker | `docker/.env` | Keep `/data` mounted. Set `INITIAL_PASSWORD` if you do not want a generated password. |
+| systemd | `/etc/one-router/one-router.env` | Set `ONE_ROUTER_ALLOWED_ORIGINS` for a public HTTPS origin. |
+| Vercel | Project environment | Set the Turso URL and token, stable encryption key, and `INITIAL_PASSWORD` for first login. Set S3 credentials to enable uploads. |
+
+| Setting | Purpose |
+| --- | --- |
+| `INITIAL_PASSWORD` | First boot only. Has no effect once the owner exists. |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | Remote libSQL database and token; required on Vercel. |
+| `ONE_ROUTER_ENCRYPTION_KEY` | Stable 32-byte key encoded as hex or base64. Required on Vercel; supply it to every instance sharing a remote database. |
+| `ONE_ROUTER_AUTH_TOKEN` | Gateway bearer token. Generate it separately from the owner password. |
+| `ONE_ROUTER_SESSION_DAYS` | Owner session lifetime in days; defaults to 30. |
+| `ONE_ROUTER_MAX_FILE_MB`, `ONE_ROUTER_MAX_FILES`, `ONE_ROUTER_MAX_TOTAL_MB` | Lower upload limits for your deployment. |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` | S3-compatible attachment storage; see [uploads](/docs/uploads/). |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OLLAMA_BASE_URL` | Optional provider defaults. You can configure providers in the app. |
+
+Keep real values out of Git, build logs, chat messages, and screenshots. `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_BASE_PATH` are public web build inputs. Leave the API URL empty for the default same-origin deployment.

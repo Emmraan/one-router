@@ -1,0 +1,16 @@
+---
+title: Authentication
+description: How the owner account, sessions, and gateway credentials work.
+---
+
+## Owner and sessions
+
+One owner signs in with a password. A browser cookie identifies each session; sign out when you finish using a shared device. The first login and any password recovery require you to change the password before opening the workspace. A regular password change signs out other sessions; an administrative reset revokes all sessions.
+
+## Gateway clients
+
+Set a separate `ONE_ROUTER_AUTH_TOKEN` to allow CLI tools, SDKs, or editors to use the gateway. Send it as a bearer token. The browser workspace uses cookies instead. See the [gateway reference](/docs/gateway/).
+
+## Public instances
+
+Use HTTPS for the whole origin, including API calls. Use a long, unique owner password and leave the backend bound to loopback behind the proxy. Anyone who obtains the gateway token can make provider calls at your expense. Restrict access to the instance and rotate a token if it is exposed.

@@ -1,0 +1,22 @@
+---
+title: systemd
+description: Run the CLI as a dedicated service on a Linux host.
+---
+
+## Install the unit
+
+1. Make Node.js <NodeVersion /> available on the system PATH. Install [the CLI globally](/docs/installation/#install-the-cli) once the npm package is released. Use [Docker Compose](/docs/docker/) for a source-based server install before release.
+2. Create a system user and group called `one-router`, with no login shell. Copy `templates/one-router.service` from the installed package (or `packages/cli/templates/one-router.service` from the matching checkout) to `/etc/systemd/system/one-router.service`.
+3. If the installed `one-router` binary is not at `/usr/local/bin/one-router`, update `ExecStart` to its absolute path. Ensure the service user can read the installation; the default unit protects home directories.
+4. Copy `.env.vps.example` to `/etc/one-router/one-router.env` with mode `0600`. Set `INITIAL_PASSWORD` and, for public use, `ONE_ROUTER_ALLOWED_ORIGINS` as described in [VPS and HTTPS](/docs/vps/#set-up-https).
+
+## Enable the service
+
+```bash verify="systemd-start"
+sudo systemctl daemon-reload
+sudo systemctl enable --now one-router.service
+```
+
+Sign in through your chosen origin and change the initial password. Remove `INITIAL_PASSWORD` from the environment file and restart the service after setup. Use the system journal to check startup; if you did not supply a password, the service logs the generated password on first start. The unit stores local data under `/var/lib/one-router`.
+
+Use [VPS password recovery](/docs/passwords/#reset-on-a-vps) if you forget the password. See [uninstall](/docs/uninstall/#systemd) before deleting the service or its state.
