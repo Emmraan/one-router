@@ -2,7 +2,7 @@ import { lookup } from 'node:dns/promises';
 import type { LookupAddress } from 'node:dns';
 import type { LookupFunction } from 'node:net';
 import { assertSafeUrl, type FetchLike } from '@one-router/core';
-import { Agent } from 'undici';
+import { Agent, fetch as undiciFetch } from 'undici';
 
 type Resolve = (hostname: string) => Promise<LookupAddress[]>;
 
@@ -25,10 +25,12 @@ export function createSafeLookup(resolve: Resolve = (hostname) => lookup(hostnam
 }
 
 const dispatcher = new Agent({ connect: { lookup: createSafeLookup(), timeout: 10_000 } });
+// Node's bundled fetch may use a different dispatcher protocol than the installed Agent.
+const providerFetch = undiciFetch as unknown as FetchLike;
 
 export const safeProviderFetch: FetchLike = async (input, init) => {
   const raw = input instanceof Request ? input.url : String(input);
   // Core adapters permit literal loopback only for Ollama; all other private literals remain forbidden.
   assertSafeUrl(raw, { allowLocalhost: true });
-  return fetch(input, { ...init, redirect: 'manual', dispatcher } as RequestInit);
+  return providerFetch(input, { ...init, redirect: 'manual', dispatcher } as RequestInit);
 };
