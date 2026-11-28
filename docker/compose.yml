@@ -14,14 +14,14 @@ services:
 
   minio:
     profiles: [minio]
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: cgr.dev/chainguard/minio:latest-dev@sha256:ac762bc1dde2a925364117c7c0974b4b8dd720b9427c5f86ff7442823d25bd73
     entrypoint:
       - /bin/sh
       - -ec
       - |
         : "$${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in docker/.env}"
         : "$${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in docker/.env}"
-        exec /usr/bin/docker-entrypoint.sh "$$@"
+        exec /usr/bin/minio "$$@"
       - minio-entrypoint
     command: [server, /data]
     environment:
