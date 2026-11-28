@@ -40,9 +40,10 @@ test('static docs support search, section navigation and copying commands', asyn
   await expect(page.getByRole('heading', { name: 'Passwords and recovery', exact: true })).toBeVisible();
   const toc = page.getByRole('button', { name: /on this page/i });
   if (await toc.isVisible()) await toc.click();
-  await page.getByRole('link', { name: 'Reset locally', exact: true }).first().click();
+  await page.getByRole('link', { name: 'Reset locally', exact: true }).filter({ visible: true }).last().click();
   await expect(page).toHaveURL(/#reset-locally$/);
-  await page.getByRole('button', { name: /copy/i }).first().click();
+  await page.getByRole('figure').filter({ hasText: 'one-router user reset-password' })
+    .getByRole('button', { name: 'Copy Text', exact: true }).click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('one-router user reset-password');
   expect(external).toEqual([]);
 });
