@@ -1,3 +1,4 @@
+import { DatabaseSync } from 'node:sqlite';
 import { expect, test, type Page } from '@playwright/test';
 
 const INITIAL_PASSWORD = 'correct horse battery staple';
@@ -56,6 +57,22 @@ async function login(page: Page): Promise<void> {
 }
 
 async function stats(page: Page) {
+  const database = process.env.E2E_STATS_DB;
+  if (database) {
+    const client = new DatabaseSync(database, { readOnly: true, timeout: 5000 });
+    try {
+      const row = client.prepare(
+        'select (select count(*) from chats) as chats, (select count(*) from messages) as messages, (select count(*) from attachments) as attachments',
+      ).get() as Record<string, number> | undefined;
+      return {
+        chats: Number(row?.chats ?? 0),
+        messages: Number(row?.messages ?? 0),
+        attachments: Number(row?.attachments ?? 0),
+      };
+    } finally {
+      client.close();
+    }
+  }
   const response = await page.request.get('/health/__e2e/stats');
   expect(response.ok()).toBeTruthy();
   return (await response.json()) as { chats: number; messages: number; attachments: number };

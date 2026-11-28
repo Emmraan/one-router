@@ -8,7 +8,7 @@ No MVP tag, npm publication, or GitHub release has been created.
 | Check | Evidence / remaining work |
 |---|---|
 | Full phase gate | Local gates passed on the code revision: 691 tests, lint (three existing warnings), typecheck, build, JS 188.1 KB gzip, CSS 7.1 KB, audit gate, docs check, shared target smoke. Code/workflow revision 8b4e527: CI 46166869403 passed quality on Node 24 and 26, integration, E2E, visual, and web budget; CLI package 46166869447 passed. This checklist edit is docs-only. |
-| Shared target suite | Built CLI passed locally. Release verification 46166869421 passed clean Node 24 tarball, Docker lifecycle, systemd, and runtime budgets; only hosted preview failed for missing credentials. |
+| Shared target suite | Built CLI and the packed tarball passed locally, including the five browser E2E tests against the packed CLI and a local provider stub. Release verification 46166869421 passed clean Node 24 tarball, Docker lifecycle, systemd, and runtime budgets; only hosted preview failed for missing credentials. The browser suite is now part of the permanent `e2e-tarball` job; CI evidence on the browser-suite revision is pending. |
 | OS conformance | CLI package 46166869447 passed Ubuntu, Windows, macOS, and Alpine on the code revision. |
 | Docker lifecycle and image | Release verification 46166869421 passed image/lifecycle checks. N-1 uses Phase 7 source until a previous image tag exists. |
 | systemd lifecycle | Release verification 46166869421 passed. Real VPS/TLS remains owner-declined and unverified. |
@@ -47,7 +47,7 @@ Prior phase evidence is not a substitute for final release verification.
 | SC-17 | Minimal README/local SVG preview unchanged; build checks passed locally. |
 | SC-18 | Owner approved supported-major exceptions: TypeScript 7 is outside typescript-eslint's supported range (<6.1); eslint-plugin-react excludes ESLint 10; Node types follow the Node 24 target. Compatible patch/minor updates applied. Revisit when peers support the newer majors. |
 | SC-20 | Uninstall docs and CLI/Docker/systemd smoke passed in release verification 46166869421; owner manual sign-off pending. |
-| SC-21 | Shared HTTP suite passed for the tarball, Docker, and systemd targets in 46166869421; hosted preview pending. Full browser suite currently runs on local fixtures only. |
+| SC-21 | Shared HTTP suite passed for the tarball, Docker, and systemd targets in 46166869421. The five browser E2E tests also pass against the packed CLI locally and now run in the permanent `e2e-tarball` job; hosted preview pending. |
 | SC-22 | Docker lifecycle script retained; release verification 46166869421 passed on the code revision. |
 | SC-23 | Docs build passed; 19 registered command blocks across 25 pages verified locally. |
 

@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const external = process.env.E2E_EXTERNAL === '1';
+
 export default defineConfig({
   testDir: './e2e',
   testIgnore: '**/redesign/**',
@@ -9,11 +11,11 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:3100',
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3100',
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: [
+  webServer: external ? undefined : [
     {
       command: 'node scripts/serve-static.mjs',
       url: 'http://localhost:3100/login/',

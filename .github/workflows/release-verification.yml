@@ -31,7 +31,7 @@ jobs:
 
   e2e-tarball:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -54,6 +54,16 @@ jobs:
             pnpm add /input/*.tgz
             node /input/target-smoke.mjs /smoke/node_modules/onerouter/dist/index.js
           '
+      - name: Install Chromium for the packed browser suite
+        run: pnpm --filter @one-router/web exec playwright install --with-deps chromium
+      - name: Install the packed CLI outside the workspace
+        run: |
+          mkdir -p "$RUNNER_TEMP/app"
+          cd "$RUNNER_TEMP/app"
+          pnpm init
+          pnpm add "$RUNNER_TEMP/target/"*.tgz
+      - name: Run the browser suite against the packed CLI
+        run: node scripts/e2e-tarball.mjs "$RUNNER_TEMP/app/node_modules/onerouter/dist/index.js"
 
   docker-lifecycle:
     runs-on: ubuntu-latest

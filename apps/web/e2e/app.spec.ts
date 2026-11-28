@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 const INITIAL_PASSWORD = 'correct horse battery staple';
 const NEW_PASSWORD = 'one-router-e2e-password';
+const PROVIDER_TYPE = process.env.E2E_PROVIDER_TYPE ?? 'openai';
+const PROVIDER_BASE_URL = process.env.E2E_PROVIDER_BASE_URL ?? 'https://api.openai.com/v1';
 
 // One serial scenario keeps the real server state linear: bootstrap, forced
 // password change, a real streamed send, reload, logout, and the 401 gate.
@@ -45,8 +47,8 @@ test('owner bootstrap through logout on the static export', async ({ page }, tes
       headers: { origin: 'http://localhost:3100' },
       data: {
         name: 'Fixture',
-        type: 'openai',
-        baseUrl: 'https://api.openai.com/v1',
+        type: PROVIDER_TYPE,
+        baseUrl: PROVIDER_BASE_URL,
         apiKey: 'fixture-key',
         models: ['fixture-model'],
         isActive: true,
