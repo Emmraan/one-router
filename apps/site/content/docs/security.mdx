@@ -35,6 +35,8 @@ Provider keys and application records are encrypted at rest. Keep the encryption
 
 Uploads pass through the backend for validation and encryption. Body readers enforce actual byte limits even if `Content-Length` is missing or false. Provider calls have deadlines and do not follow redirects. Private, metadata, and non-HTTP literal provider URLs are blocked, with an explicit localhost exception for Ollama.
 
+Model discovery reads at most 2 MiB of actual response bytes and accepts at most 1,000 models; larger responses fail instead of being truncated. Provider streams are read only as fast as the client consumes them, and a cancelled client cancels the provider request. Non-streaming collection stops and cancels the provider stream at 8 MiB. A single provider stream line and a single SSE event are each capped at 1 MiB.
+
 Provider connections validate the DNS answer set inside the socket connector and pass only those validated addresses to the socket. A public hostname resolving to a private or metadata address is rejected, including mixed public/private answers. Every new connection repeats validation, so a later DNS answer cannot rebind to an internal service. Redirects remain disabled. The explicit localhost exception is only available to Ollama through the provider adapter. Outbound firewall restrictions remain useful defense in depth.
 
 ## Dependency checks

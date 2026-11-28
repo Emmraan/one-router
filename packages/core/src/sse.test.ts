@@ -50,6 +50,11 @@ describe('SseParser', () => {
     const parser = new SseParser({ maxBufferBytes: 8 });
     expect(() => parser.push('data: 123456789')).toThrow(/buffer/i);
   });
+
+  it('caps data lines that never reach an event separator', () => {
+    const parser = new SseParser({ maxBufferBytes: 16 });
+    expect(() => parser.push('data: x\n'.repeat(100))).toThrow(/event/i);
+  });
 });
 
 describe('encodeSse', () => {

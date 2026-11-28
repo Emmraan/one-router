@@ -14,6 +14,7 @@ const DEFAULT_MAX_BUFFER_BYTES = 1024 * 1024;
 export class SseParser {
   private buffer = '';
   private dataLines: string[] = [];
+  private dataBytes = 0;
   private eventName: string | undefined;
   private lastId: string | undefined;
   private retry: number | undefined;
@@ -69,6 +70,10 @@ export class SseParser {
 
     switch (field) {
       case 'data':
+        this.dataBytes += value.length + (this.dataLines.length ? 1 : 0);
+        if (this.dataBytes > this.maxBufferBytes) {
+          throw new Error(`SSE event data exceeded ${this.maxBufferBytes} bytes`);
+        }
         this.dataLines.push(value);
         break;
       case 'event':
@@ -91,7 +96,6 @@ export class SseParser {
       this.retry = undefined;
       return;
     }
-
     const event: SseEvent = { data: this.dataLines.join('\n') };
     if (this.eventName !== undefined) event.event = this.eventName;
     if (this.lastId !== undefined) event.id = this.lastId;
@@ -99,6 +103,7 @@ export class SseParser {
     events.push(event);
 
     this.dataLines = [];
+    this.dataBytes = 0;
     this.eventName = undefined;
     this.retry = undefined;
   }

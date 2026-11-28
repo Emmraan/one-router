@@ -7,6 +7,8 @@ description: Add providers and models, and choose how they are routed.
 
 Open **Providers** in the workspace. Pick OpenAI, Anthropic, Gemini, Ollama, or an OpenAI-compatible endpoint; enter the API key if required; and add or discover models. Use the vendor's account and endpoint. Confirm you can send a normal chat before configuring gateway clients.
 
+Model discovery accepts up to 2 MiB of response data and 1,000 models. A provider returning more fails discovery rather than showing a partial list.
+
 ## Ollama
 
 For a local CLI instance, use `http://127.0.0.1:11434` with an Ollama model already downloaded. The endpoint is reached by the ONE ROUTER server, so `127.0.0.1` in Docker refers to the container and on a VPS refers to that host. Local Ollama must be reachable on explicit loopback or `localhost`; private LAN addresses and hostnames resolving to them are rejected. In Docker, make Ollama reachable inside the application's network namespace. Do not open Ollama directly to the Internet.

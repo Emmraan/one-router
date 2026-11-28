@@ -23,12 +23,23 @@ export function openAiStream(stream: ReadableStream<Uint8Array>, options: {
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  const reader = stream.getReader();
+  const parser = new SseParser();
+  let ended = false;
+  const stop = async (reason?: unknown) => {
+    ended = true;
+    try { await reader.cancel(reason); }
+    finally { reader.releaseLock(); }
+  };
 
   return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      reader = stream.getReader();
-      const parser = new SseParser();
+    start(controller) {
+      controller.enqueue(encoder.encode(encodeSse({
+        id: options.id, object: 'chat.completion.chunk', created: options.created, model: options.model,
+        choices: [{ index: 0, delta: { role: 'assistant', content: '' }, finish_reason: null }],
+      })));
+    },
+    async pull(controller) {
       const chunk = (delta: Record<string, unknown>, finishReason: string | null) => {
         controller.enqueue(encoder.encode(encodeSse({
           id: options.id,
@@ -43,14 +54,19 @@ export function openAiStream(stream: ReadableStream<Uint8Array>, options: {
         controller.close();
       };
       try {
-        chunk({ role: 'assistant', content: '' }, null);
-        while (true) {
+        while (!ended) {
           const { done: finished, value } = await reader.read();
+          if (ended) return;
           if (finished) break;
+          let emitted = false;
           for (const event of parser.push(decoder.decode(value, { stream: true }))) {
             const text = eventText(event.data);
-            if (text) chunk({ content: text }, null);
+            if (text) {
+              chunk({ content: text }, null);
+              emitted = true;
+            }
           }
+          if (emitted) return;
         }
         for (const event of parser.push(decoder.decode())) {
           const text = eventText(event.data);
@@ -61,8 +77,12 @@ export function openAiStream(stream: ReadableStream<Uint8Array>, options: {
           if (text) chunk({ content: text }, null);
         }
         chunk({}, 'stop');
+        ended = true;
+        reader.releaseLock();
         done();
       } catch {
+        if (ended) return;
+        try { await stop(); } catch { /* A broken upstream may reject cancellation. */ }
         try {
           controller.enqueue(encoder.encode(encodeSse({
             error: {
@@ -74,13 +94,9 @@ export function openAiStream(stream: ReadableStream<Uint8Array>, options: {
         } catch {
           // The client may already be gone.
         }
-      } finally {
-        reader?.releaseLock();
       }
     },
-    cancel(reason) {
-      return reader?.cancel(reason);
-    },
+    cancel: stop,
   });
 }
 
@@ -89,24 +105,28 @@ export async function collectStream(stream: ReadableStream<Uint8Array>): Promise
   const decoder = new TextDecoder();
   const parser = new SseParser();
   let text = '';
+  let bytes = 0;
+  const append = (data: string) => {
+    const piece = eventText(data);
+    bytes += Buffer.byteLength(piece, 'utf8');
+    if (bytes > 8 * 1024 * 1024) throw new HttpError(502, 'Upstream response exceeded the size limit', 'UPSTREAM_ERROR');
+    text += piece;
+  };
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       for (const event of parser.push(decoder.decode(value, { stream: true }))) {
-        const piece = eventText(event.data);
-        text += piece;
-        if (Buffer.byteLength(text, 'utf8') > 8 * 1024 * 1024) {
-          throw new HttpError(502, 'Upstream response exceeded the size limit', 'UPSTREAM_ERROR');
-        }
+        append(event.data);
       }
     }
     for (const event of parser.push(decoder.decode())) {
-      text += eventText(event.data);
+      append(event.data);
     }
-    for (const event of parser.flush()) text += eventText(event.data);
+    for (const event of parser.flush()) append(event.data);
     return text;
   } finally {
-    reader.releaseLock();
+    try { await reader.cancel(); }
+    finally { reader.releaseLock(); }
   }
 }

@@ -19,6 +19,12 @@ export function redactEventStream(stream: ReadableStream<Uint8Array>): ReadableS
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   const parser = new SseParser();
+  let ended = false;
+  const stop = async (reason?: unknown) => {
+    ended = true;
+    try { await reader.cancel(reason); }
+    finally { reader.releaseLock(); }
+  };
   const emit = (controller: ReadableStreamDefaultController<Uint8Array>, events: ReturnType<SseParser['push']>) => {
     for (const event of events) {
       controller.enqueue(encoder.encode(`data: ${sanitize(event.data)}\n\n`));
@@ -26,17 +32,26 @@ export function redactEventStream(stream: ReadableStream<Uint8Array>): ReadableS
   };
 
   return new ReadableStream<Uint8Array>({
-    async start(controller) {
+    async pull(controller) {
       try {
-        while (true) {
+        while (!ended) {
           const { done, value } = await reader.read();
-          if (done) break;
-          emit(controller, parser.push(decoder.decode(value, { stream: true })));
+          if (ended) return;
+          if (done) {
+            emit(controller, parser.push(decoder.decode()));
+            emit(controller, parser.flush());
+            ended = true;
+            reader.releaseLock();
+            controller.close();
+            return;
+          }
+          const events = parser.push(decoder.decode(value, { stream: true }));
+          emit(controller, events);
+          if (events.length) return;
         }
-        emit(controller, parser.push(decoder.decode()));
-        emit(controller, parser.flush());
-        controller.close();
       } catch {
+        if (ended) return;
+        try { await stop(); } catch { /* A broken upstream may reject cancellation. */ }
         try {
           controller.enqueue(encoder.encode(encodeSse({
             error: PROVIDER_ERROR_MESSAGE,
@@ -49,12 +64,8 @@ export function redactEventStream(stream: ReadableStream<Uint8Array>): ReadableS
         } catch {
           // The stream may already be closed.
         }
-      } finally {
-        reader.releaseLock();
       }
     },
-    cancel(reason) {
-      return reader.cancel(reason);
-    },
+    cancel: stop,
   });
 }

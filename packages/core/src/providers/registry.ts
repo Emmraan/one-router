@@ -1,6 +1,6 @@
 import { CoreError, toErrorMessage } from '../errors';
-import type { ChatDeps, ChatRequest, DiscoveryRequest, DiscoveryResult, FetchLike, ProviderAdapter, ProviderType, StreamLineParser } from '../types';
-import { encodeSse } from '../sse';
+import type { ChatDeps, ChatRequest, DiscoveryRequest, DiscoveryResult, FetchLike, ProviderAdapter, ProviderType } from '../types';
+import { normalizeStream } from './normalize-stream';
 import { anthropicAdapter } from './anthropic';
 import { geminiAdapter } from './gemini';
 import { ollamaAdapter } from './ollama';
@@ -58,85 +58,25 @@ async function readErrorText(response: Response): Promise<string> {
   return text.slice(0, limit).trim();
 }
 
-function normalizeStream(
-  body: ReadableStream<Uint8Array>,
-  parseLine: StreamLineParser,
-): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-  const maxLineBytes = 1024 * 1024;
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-
-  return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      reader = body.getReader();
-      let buffer = '';
-
-      const emit = (line: string) => {
-        if (line.length > maxLineBytes) {
-          throw new CoreError(
-            'UPSTREAM_ERROR',
-            'Upstream stream line exceeded the 1 MiB limit',
-            502,
-          );
-        }
-        const text = parseLine(line.endsWith('\r') ? line.slice(0, -1) : line);
-        if (text) controller.enqueue(encoder.encode(encodeSse({ text })));
-      };
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          let lineEnd: number;
-          while ((lineEnd = buffer.indexOf('\n')) >= 0) {
-            const line = buffer.slice(0, lineEnd);
-            buffer = buffer.slice(lineEnd + 1);
-            if (line.trim()) emit(line);
-          }
-
-          if (buffer.length > maxLineBytes) {
-            throw new CoreError(
-              'UPSTREAM_ERROR',
-              'Upstream stream line exceeded the 1 MiB limit',
-              502,
-            );
-          }
-        }
-
-        buffer += decoder.decode();
-        if (buffer.trim()) emit(buffer);
-        controller.close();
-      } catch (error) {
-        try {
-          await reader.cancel();
-        } catch {
-          // The upstream may already be closed.
-        }
-        try {
-          controller.enqueue(
-            encoder.encode(encodeSse({ error: toErrorMessage(error) })),
-          );
-        } catch {
-          // The client may already have cancelled.
-        }
-        try {
-          controller.close();
-        } catch {
-          // The stream may already be closed.
-        }
-      } finally {
-        reader?.releaseLock();
-      }
-    },
-
-    cancel(reason) {
-      return reader?.cancel(reason);
-    },
-  });
+async function readDiscoveryBody(response: Response): Promise<unknown> {
+  if (!response.body) throw new Error('No discovery response body');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let bytes = 0;
+  let text = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > 2 * 1024 * 1024) throw new Error('Discovery response exceeded the 2 MiB limit');
+      text += decoder.decode(value, { stream: true });
+    }
+    return JSON.parse(text + decoder.decode()) as unknown;
+  } finally {
+    try { await reader.cancel(); }
+    finally { reader.releaseLock(); }
+  }
 }
 
 export async function chatCompletion(
@@ -217,7 +157,7 @@ export async function discoverModels(
 
     let body: unknown;
     try {
-      body = (await response.json()) as unknown;
+      body = await readDiscoveryBody(response);
     } catch (error) {
       return { success: false, error: toErrorMessage(error) };
     }
@@ -225,6 +165,7 @@ export async function discoverModels(
     const models = adapter
       .parseDiscoveryResponse(body)
       .filter((name) => name.length > 0);
+    if (models.length > 1000) return { success: false, error: 'Discovery response exceeded the 1,000 model limit' };
     if (models.length > 0) {
       return { success: true, models: [...models].sort() };
     }

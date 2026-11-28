@@ -7,15 +7,15 @@ No MVP tag, npm publication, or GitHub release has been created.
 
 | Check | Evidence / remaining work |
 |---|---|
-| Full phase gate | Changed-file and full local gates passed: 684 tests, lint (three existing warnings), typecheck, build, JS 188.1 KB gzip, CSS 7.1 KB, audit gate. First CI quality failed because the release config was omitted from its commit; fixed in the next revision. CI rerun required. |
+| Full phase gate | Changed-file and full local gates passed: 691 tests, lint (three existing warnings), typecheck, build, JS 188.1 KB gzip, CSS 7.1 KB, audit gate, docs check, shared target smoke. First CI quality failed because the release config was omitted from its commit; fixed in the next revision. CI rerun required. |
 | Shared target suite | Built CLI passed locally. Scratch CI 46159523571 passed clean Node 24 tarball, Docker lifecycle, and runtime budgets. Hosted preview failed for missing credentials; rerun on the final revision. |
 | OS conformance | CLI CI 46159523435 passed Ubuntu, Windows, macOS, and Alpine. Final revision rerun pending. |
 | Docker lifecycle and image | Scratch CI 46159523571 passed image/lifecycle checks. N-1 uses Phase 7 source until a previous image tag exists. |
 | systemd lifecycle | Scratch CI 46159523571 passed. Real VPS/TLS remains owner-declined and unverified. |
 | Vercel + Turso + S3 | Dedicated preview and secrets required. Missing credentials must fail, not skip. Preview verification pending. |
-| Runtime budgets | Latest local gate: 84,287,488 bytes (about 80 MiB) idle RSS, authenticated API p95 4.8 ms over 50 samples after 10 warmups. Ubuntu scratch budget job passed on the earlier revision. Local bootstrap is diagnostic only; Vercel cold start <=2 s still unverified. |
+| Runtime budgets | Latest local gate: 96,063,488 bytes (about 92 MiB) idle RSS, authenticated API p95 6.1 ms over 50 samples after 10 warmups. Ubuntu scratch budget job passed on the earlier revision. Local bootstrap is diagnostic only; Vercel cold start <=2 s still unverified. |
 | Audit / supply chain | Current audit: zero high/critical; one moderate esbuild development-server advisory, previously accepted. Lockfile changes accompany manifests. Installed lifecycle inventory found esbuild/unrs-resolver postinstall scripts; remaining dependency entries are prepare scripts, which registry installs do not execute. The first-party CLI prepack rebuilds after release versioning. Frozen CI install on the final revision pending. |
-| Security pass | Three high findings reproduced and fixed below. Remaining adversarial areas still need final review. |
+| Security pass | Four high findings reproduced and fixed below (findings 1, 2, 7, and 8). Remaining adversarial areas still need final review. |
 | Release automation | CLI-only semantic-release configuration; npm publish depends on NPM_TOKEN. Main-only workflow requires an explicit ready marker in this checklist and successful required check runs for the same revision, including hosted preview; skipped checks fail. Configuration/readiness tests passed, including rebuilding the CLI with the version written before packing. Actual release and scratch-job promotion still blocked. |
 | Live providers | Owner-run only, no live network in tests. OpenAI, Anthropic, Gemini, and Ollama smoke pending. |
 | Backup/restore | Shared suite checks portable encrypted archive merge restore. Whole-data-directory/Turso/S3 disaster recovery still needs owner sign-off. |
@@ -40,7 +40,7 @@ Prior phase evidence is not a substitute for final release verification.
 | SC-10 | Chat/temp-mode tests; final rerun pending. |
 | SC-11 | Phase 9 Windows visual baselines; final rerun pending. |
 | SC-12 | Network O assets shipped and previously checked. |
-| SC-13 | Full local hardening gate passed with 684 tests; required final CI pending. |
+| SC-13 | Full local hardening gate passed with 691 tests; required final CI pending. |
 | SC-14 | Source-length/lint gate passed locally. |
 | SC-15 | CLI release configuration/readiness tested and guarded workflow added; actual release pending. |
 | SC-16 | Audit reports all severities and blocks high/critical; current audit passes. |
@@ -68,6 +68,12 @@ SC-19 is post-MVP and is not a release requirement.
 6. **Low, fixed with owner approval: stream cache directive.** A red fixture-stream regression proved global middleware lost `no-transform`. SSE now receives `Cache-Control: no-store, no-transform`; non-stream APIs retain `no-store`. Local gates passed; final CI pending.
 
 7. **High, fixed: configured session expiry was extended silently.** Set `ONE_ROUTER_SESSION_DAYS=1`, log in, access an authenticated route after 61 minutes, then replay the cookie two days later. The database touch used a fixed 30-day lifetime, so the policy-expired credential still returned `200` instead of `401`. A real-libSQL regression proved this red. Smallest fix: pass the configured lifetime to the session touch, validate it like session creation, and keep database and cookie expiry aligned.
+
+8. **High, fixed: provider streams ignored client backpressure and left upstream work running.** A fixture provider stream with `highWaterMark: 0` was pulled 32 times while the consumer read nothing, and cancelling the output did not cancel the source. In non-streaming collection, an 8 MiB overflow rejected but did not cancel the provider stream, so a malicious or broken upstream could keep reading until the request deadline. Smallest fix: pull-based normalization, redaction, and gateway wrappers emit one frame per pull and propagate cancellation; collection cancels on every exit and counts flushed events toward its limit. Regression tests cover core chat, chat redaction, the gateway stream, and collection overflow. Local gates passed; final CI pending.
+
+9. **Medium, fixed with owner approval: unbounded model discovery.** A discovery response with a false `Content-Length: 1` streamed more than 2 MiB and was still parsed; a response with 10,000 models succeeded. Discovery now reads actual bytes with fatal UTF-8 decoding, cancels at more than 2 MiB, and rejects more than 1,000 models instead of truncating. The owner approved both limits, and regression tests cover the lying length and the oversized model list. Local gates passed; final CI pending.
+
+10. **Medium, fixed: SSE event data grew without an event separator.** A provider sending many short `data:` lines and no blank line accumulated an unbounded data array even though each line and the chunk buffer stayed under the existing limit. The parser now caps total data per event at the same 1 MiB limit and resets the count on dispatch. A regression test reproduces the separator-less growth. Local gates passed; final CI pending.
 
 ## Dependency justification
 
