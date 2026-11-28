@@ -11,6 +11,7 @@
 | 6 | merged | phase-6-redesign |
 | 7 | merged | phase-7-cli |
 | 8 | merged | phase-8-deployment |
+| 9 | merged | phase-9-landing-docs |
 
 ## Phase 0 - Workspace, gates, CI
 
@@ -127,3 +128,12 @@
 - CI: runs 46129689771, 46129689815, and 46129689818 passed the workspace and CLI checks, Docker lifecycle and MinIO readiness, Ubuntu systemd smoke, and Vercel CLI build and artifact checks.
 - Deviations: the upgrade test used an image built from Phase 7 source because no prior image tag exists. The owner requested removal of the phase-only workflow without adding its jobs to permanent CI; the smoke scripts remain.
 - Accepted: the hosted Vercel preview was skipped and deferred by the owner. Turso and S3 round trips and HTTPS session cookies remain unverified on Vercel.
+
+## Phase 9 - Landing, docs, README
+
+- Work commit: 22ff148; verification updates: e82d66a and af79723; local `--no-ff` merge into `main`.
+- Gate: lint (three known warnings), typecheck, 641 tests, static builds, budget, audit (zero high or critical), and 19 verified command blocks across 24 docs pages. The export passes internal link and anchor checks.
+- Browser: landing interactions and baselines passed at 1440, 1024, and 768 px. The docs test passed at all three widths for search, section navigation, and clipboard copy; it also checks for off-origin requests.
+- CI: workspace and browser run 46152995631; packaged CLI run 46152995574 passed on Windows, macOS, Ubuntu, and Alpine. Docker and systemd command smoke passed in 46152047036; the temporary workflow was removed.
+- Accepted: registry install and uninstall examples are verified against the packaged tarball with pnpm until npm publication. The hosted docs and Vercel preview are pending deployment.
+- Dependencies: Fumadocs core, UI, and MDX provide static docs, search, navigation, and copy controls; parse5 reads exported HTML for link and anchor checks. The workspace did not have equivalents.
