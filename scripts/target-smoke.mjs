@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { cp, mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -47,7 +47,18 @@ try {
   await closed;
   await start(port);
   await run(suite, ['persist', origin, id]);
-  console.log('Shared target suite passed: auth, headers, chat/message persistence, upload, encrypted export/import, restart.');
+  const recoveryFixture = await run(suite, ['backup-seed', origin]);
+  server.kill();
+  await closed;
+  const backup = join(directory, 'backup');
+  // Copy only after shutdown so the database, WAL, attachments, and encryption key agree.
+  await cp(env.ONE_ROUTER_DATA_DIR, backup, { recursive: true });
+  env.ONE_ROUTER_DATA_DIR = join(directory, 'restored');
+  env.ONE_ROUTER_CONFIG = join(directory, 'restored-config.json');
+  await cp(backup, env.ONE_ROUTER_DATA_DIR, { recursive: true });
+  await start(port);
+  await run(suite, ['backup-restore', origin, id, recoveryFixture]);
+  console.log('Shared target suite passed: auth, headers, chat/message persistence, upload, encrypted export/import, restart, full data-directory recovery.');
 } finally {
   if (server && closed) {
     server.kill();

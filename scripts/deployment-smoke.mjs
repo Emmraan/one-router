@@ -86,7 +86,7 @@ async function readMessage(cookie, id) {
   assert.equal((await response.json()).items[0]?.content, message);
 }
 
-async function checkAttachment(cookie) {
+async function checkAttachment(cookie, keep = false) {
   const body = new FormData();
   body.set('file', new File([attachment], 'smoke.txt', { type: 'text/plain' }));
   const response = await expectResponse('/api/files', 201, { cookie, body });
@@ -94,8 +94,9 @@ async function checkAttachment(cookie) {
   try {
     const stored = await expectResponse(file.url, 200, { cookie });
     assert.equal(await stored.text(), attachment);
+    return file.url;
   } finally {
-    await expectResponse(file.url, 200, { cookie, method: 'DELETE' });
+    if (!keep) await expectResponse(file.url, 200, { cookie, method: 'DELETE' });
   }
 }
 
@@ -146,6 +147,31 @@ switch (mode) {
   case 'persist':
     await readMessage(await login(OWNER_PASSWORD, false), chatId);
     break;
+  case 'backup-seed': {
+    const cookie = await login(OWNER_PASSWORD, false);
+    const file = await checkAttachment(cookie, true);
+    const response = await expectResponse('/api/providers', 201, { cookie, body: {
+      name: 'Backup fixture', type: 'openai', baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'backup-fixture-key', models: ['fixture-model'],
+    } });
+    const { provider } = await response.json();
+    console.log(JSON.stringify({ file, providerId: provider.id }));
+    break;
+  }
+  case 'backup-restore': {
+    const cookie = await login(OWNER_PASSWORD, false);
+    await readMessage(cookie, chatId);
+    const { file, providerId } = JSON.parse(process.argv[5]);
+    const stored = await expectResponse(file, 200, { cookie });
+    assert.equal(await stored.text(), attachment);
+    const response = await expectResponse(`/api/providers/${providerId}`, 200, { cookie });
+    const { provider } = await response.json();
+    assert.equal(provider.name, 'Backup fixture');
+    assert.deepEqual(provider.models, ['fixture-model']);
+    assert.equal(provider.hasApiKey, true);
+    assert.equal(provider.apiKey, undefined);
+    break;
+  }
   case 'reset':
     await login(OWNER_PASSWORD, true);
     break;

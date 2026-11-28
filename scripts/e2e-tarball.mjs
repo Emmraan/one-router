@@ -97,8 +97,17 @@ try {
   if (process.env.CI) console.error(`::error::${error instanceof Error ? error.message : 'Packed browser suite failed'}`);
   throw error;
 } finally {
-  if (docker) await run('docker', ['rm', '--force', container]).catch(() => undefined);
-  for (const child of children) child.kill();
-  await Promise.all(exits);
-  await rm(directory, { recursive: true, force: true });
+  try {
+    if (docker) {
+      await run('docker', ['rm', '--force', container]).catch(() => undefined);
+      // The image UID owns private attachment directories that the host runner cannot traverse.
+      await run('docker', ['run', '--rm', '--mount', `type=bind,source=${dataDir},target=/data`,
+        '--entrypoint', 'node', image, '-e',
+        'const fs = require("node:fs"); for (const name of fs.readdirSync("/data")) fs.rmSync("/data/" + name, { recursive: true, force: true });']);
+    }
+  } finally {
+    for (const child of children) child.kill();
+    await Promise.all(exits);
+    await rm(directory, { recursive: true, force: true });
+  }
 }
