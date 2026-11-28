@@ -68,14 +68,17 @@ jobs:
           cat > .vercel/project.json <<'JSON'
           {"projectId":"prj_ci_fixture","orgId":"team_ci_fixture","settings":{"rootDirectory":"apps/web","nodeVersion":"24.x"}}
           JSON
-          pnpm dlx vercel@68.0.0 build --standalone
+          pnpm dlx vercel@68.0.0 build --standalone --output .vercel/ci-output
       - name: Check the standalone function and public assets
         run: |
-          output=apps/web/.vercel/output
-          test -s "$output/config.json"
-          test -s "$output/functions/api/router.func/migrations/0000_initial.sql"
-          test -s "$output/static/login/index.html"
-          node --input-type=module -e 'import assert from "node:assert/strict"; import handler from "./apps/web/.vercel/output/functions/api/router.func/index.mjs"; assert.equal(typeof handler, "function")'
+          output=.vercel/ci-output
+          for file in config.json functions/api/router.func/migrations/0000_initial.sql static/login/index.html; do
+            if [[ ! -s "$output/$file" ]]; then
+              echo "::error::Missing Vercel build output: $file"
+              exit 1
+            fi
+          done
+          node --input-type=module -e 'import assert from "node:assert/strict"; import handler from "./.vercel/ci-output/functions/api/router.func/index.mjs"; assert.equal(typeof handler, "function")'
 
   vercel-preview:
     if: ${{ vars.VERCEL_PREVIEW_ENABLED == 'true' }}
