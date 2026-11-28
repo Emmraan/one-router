@@ -64,6 +64,14 @@ jobs:
           pnpm add "$RUNNER_TEMP/target/"*.tgz
       - name: Run the browser suite against the packed CLI
         run: node scripts/e2e-tarball.mjs "$RUNNER_TEMP/app/node_modules/onerouter/dist/index.js"
+      - name: Preserve packed browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packed-browser-traces
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
   docker-lifecycle:
     runs-on: ubuntu-latest

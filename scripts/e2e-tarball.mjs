@@ -30,7 +30,7 @@ function start(file, args, env) {
 async function ready(url, check) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
       if (response.ok && (!check || (await check(response)))) return;
     } catch {
       // The process may still be binding its port.
@@ -73,6 +73,9 @@ try {
     E2E_STATS_DB: join(dataDir, 'one-router.db'),
   });
   console.log('Packed CLI browser suite passed.');
+} catch (error) {
+  if (process.env.CI) console.error(`::error::${error instanceof Error ? error.message : 'Packed browser suite failed'}`);
+  throw error;
 } finally {
   for (const child of children) child.kill();
   await Promise.all(exits);
