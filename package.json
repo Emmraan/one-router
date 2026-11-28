@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build --filter=@one-router/web --filter=@one-router/site && node scripts/build-smoke.mjs",
+    "build": "turbo run build --filter=onerouter --filter=@one-router/site && node scripts/build-smoke.mjs",
     "icons": "node scripts/generate-icons.mjs",
     "test:visual": "pnpm --filter @one-router/web exec playwright test --config playwright.visual.config.ts",
     "start": "pnpm --filter @one-router/web start",

@@ -1,4 +1,5 @@
-import { copyFile, mkdtemp, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { copyFile, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -29,6 +30,16 @@ it('applies the initial migration exactly once with all required tables', async 
   expect((await db.client.execute('PRAGMA foreign_keys')).rows[0].foreign_keys).toBe(1);
 });
 
+it('opens a database whose initial migration came from a CRLF checkout', async () => {
+  const migrations = join(directory, 'packaged');
+  const source = (await readFile(new URL('./migrations/0000_initial.sql', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
+  const windowsChecksum = createHash('sha256').update(source.replaceAll('\n', '\r\n')).digest('hex');
+  await mkdir(migrations);
+  await writeFile(join(migrations, '0000_initial.sql'), source);
+  await db.client.execute({ sql: 'UPDATE migrations SET checksum = ? WHERE name = ?', args: [windowsChecksum, '0000_initial.sql'] });
+  await expect(migrate(db, { directory: migrations })).resolves.toBeUndefined();
+});
+
 it('seeds once and ignores INITIAL_PASSWORD after bootstrap', async () => {
   const first = await seedOwner(db, { password: 'original bootstrap password' });
   const second = await seedOwner(db, { password: 'different bootstrap password' });
@@ -42,7 +53,6 @@ it('seeds once and ignores INITIAL_PASSWORD after bootstrap', async () => {
 }, 15000);
 
 it('rolls back a broken additive migration and never records success', async () => {
-  const { mkdir } = await import('node:fs/promises');
   const migrations = join(directory, 'broken');
   await mkdir(migrations);
   await copyFile(new URL('./migrations/0000_initial.sql', import.meta.url), join(migrations, '0000_initial.sql'));
@@ -53,7 +63,6 @@ it('rolls back a broken additive migration and never records success', async () 
 });
 
 it('refuses a missing or modified applied migration before applying new work', async () => {
-  const { mkdir } = await import('node:fs/promises');
   const migrations = join(directory, 'incomplete');
   await mkdir(migrations);
   await writeFile(join(migrations, '0001_new.sql'), 'CREATE TABLE unexpected_upgrade (id TEXT);');

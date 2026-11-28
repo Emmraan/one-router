@@ -1,0 +1,28 @@
+{
+  "name": "onerouter",
+  "version": "0.1.0",
+  "description": "Self-hosted AI chat workspace and OpenAI-compatible gateway",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "bin": { "one-router": "dist/index.js", "onerouter": "dist/index.js" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "node build.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@libsql/client": "0.18.0",
+    "unpdf": "2.2.3"
+  },
+  "devDependencies": {
+    "@hono/node-server": "2.1.11",
+    "@one-router/core": "workspace:*",
+    "@one-router/db": "workspace:*",
+    "@one-router/server": "workspace:*",
+    "@one-router/web": "workspace:*",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3"
+  }
+}
