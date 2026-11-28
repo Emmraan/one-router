@@ -6,7 +6,7 @@
   "type": "module",
   "engines": { "node": ">=24" },
   "bin": { "one-router": "dist/index.js", "onerouter": "dist/index.js" },
-  "files": ["dist"],
+  "files": ["dist", "templates/one-router.service"],
   "scripts": {
     "build": "node build.mjs",
     "lint": "eslint .",

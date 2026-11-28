@@ -5,6 +5,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig([
   globalIgnores([
     '**/.next/**',
+    '**/.vercel/**',
     '**/out/**',
     '**/dist/**',
     '**/node_modules/**',
@@ -16,7 +17,7 @@ export default defineConfig([
     '**/test-results/**',
   ]),
   {
-    files: ['apps/{web,site}/**/*.{js,jsx,mjs,cjs,ts,tsx}'],
+    files: ['apps/{web,site}/**/*.{js,jsx,mjs,cjs,ts,mts,tsx}'],
     extends: [...next],
     rules: {
       // The app uses the App Router only; there is no pages directory to link to.

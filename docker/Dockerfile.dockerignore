@@ -1,0 +1,12 @@
+.git
+.vercel
+**/.vercel
+**/.env*
+**/.next
+**/node_modules
+**/out
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+.ci-logs

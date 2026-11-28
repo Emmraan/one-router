@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto';
 import { openAsBlob } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { pagePolicy } from '@one-router/server/static-policy';
 
 const types: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.txt': 'text/plain; charset=utf-8',
@@ -9,16 +9,6 @@ const types: Record<string, string> = {
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
   '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
 };
-
-function pagePolicy(html: string) {
-  const hashes = new Set<string>();
-  for (const [, script] of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
-    if (script) hashes.add(`'sha256-${createHash('sha256').update(script.replace(/\r\n?/g, '\n')).digest('base64')}'`);
-  }
-  return ["default-src 'none'", ["script-src 'self'", ...hashes].join(' '),
-    "style-src 'self' 'unsafe-inline'", "connect-src 'self'", "img-src 'self' blob: data:",
-    "font-src 'self'", "base-uri 'none'", "frame-ancestors 'none'", "form-action 'self'"].join('; ');
-}
 
 export async function createStaticHandler(root: string, production: boolean) {
   const files = new Map<string, { filename: string; type: string; policy?: string; html?: string }>();

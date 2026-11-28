@@ -1,0 +1,105 @@
+name: Phase 8 deployment verification
+
+on:
+  push:
+    branches: [phase-8-deployment]
+    paths:
+      - '.github/workflows/deployment-scratch.yml'
+      - 'apps/web/**'
+      - 'docker/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bash scripts/docker-smoke.sh
+
+  systemd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=onerouter
+      - run: bash scripts/systemd-smoke.sh
+
+  vercel-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @one-router/web vercel-build
+      - name: Check the standalone function and public assets
+        run: |
+          output=apps/web/.vercel/output
+          test -s "$output/config.json"
+          test -s "$output/functions/api/router.func/migrations/0000_initial.sql"
+          test -s "$output/static/login/index.html"
+          node --input-type=module -e 'import assert from "node:assert/strict"; import handler from "./apps/web/.vercel/output/functions/api/router.func/index.mjs"; assert.equal(typeof handler, "function")'
+
+  vercel-preview:
+    if: ${{ vars.VERCEL_PREVIEW_ENABLED == 'true' }}
+    needs: vercel-artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: deployment-preview
+    env:
+      VERCEL_TELEMETRY_DISABLED: '1'
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Link and build the dedicated preview project
+        run: |
+          test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID" && test -n "$VERCEL_TOKEN"
+          pnpm dlx vercel@68.0.0 pull --yes --environment=preview --token "$VERCEL_TOKEN"
+          pnpm dlx vercel@68.0.0 build --token "$VERCEL_TOKEN"
+      - name: Deploy and exercise Turso, S3, and HTTPS cookies
+        env:
+          INITIAL_PASSWORD: ${{ secrets.VERCEL_INITIAL_PASSWORD }}
+          OWNER_PASSWORD: ${{ secrets.VERCEL_SMOKE_OWNER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          test -n "$INITIAL_PASSWORD" && test -n "$OWNER_PASSWORD"
+          address=$(pnpm dlx vercel@68.0.0 deploy --prebuilt --yes --token "$VERCEL_TOKEN")
+          node scripts/deployment-smoke.mjs preview "$address"

@@ -17,6 +17,7 @@ export interface ServerEnv {
   databaseUrl: string;
   databaseAuthToken?: string;
   encryptionKey?: string;
+  allowLocalKeyCreation?: boolean;
   dataDir: string;
   initialPassword?: string;
   authToken?: string;
@@ -83,7 +84,8 @@ function s3Config(source: Record<string, string | undefined>): S3Config | undefi
   const bucket = optional(source.S3_BUCKET);
   const accessKeyId = optional(source.S3_ACCESS_KEY_ID);
   const secretAccessKey = optional(source.S3_SECRET_ACCESS_KEY);
-  if (!bucket && !accessKeyId && !secretAccessKey) return undefined;
+  if ((!bucket && !accessKeyId && !secretAccessKey) ||
+    (isVercel(source) && (!bucket || !accessKeyId || !secretAccessKey))) return undefined;
   const region = optional(source.S3_REGION) ?? 'us-east-1';
   const endpoint = optional(source.S3_ENDPOINT) ?? `https://s3.${region}.amazonaws.com`;
   if (!/^[A-Za-z0-9][A-Za-z0-9.-]{1,61}[A-Za-z0-9]$/.test(bucket ?? '') ||
@@ -109,19 +111,20 @@ function s3Config(source: Record<string, string | undefined>): S3Config | undefi
   };
 }
 
-function storageKind(source: Record<string, string | undefined>, production: boolean, s3: S3Config | undefined): FileStorageKind {
-  if (s3) return 's3';
-  // Vercel has no persistent local disk; surface the missing S3 configuration at upload time.
-  if (source.VERCEL === '1' || source.VERCEL === 'true') return 's3';
-  if (production) return 'filesystem';
-  return 'sqlite';
+function isVercel(source: Record<string, string | undefined>): boolean {
+  return source.VERCEL === '1' || source.VERCEL === 'true';
 }
 
-export function loadEnv(source: Record<string, string | undefined> = process.env): ServerEnv {
+export function loadEnv(
+  source: Record<string, string | undefined> = process.env,
+  options: { localDatabase?: boolean } = {},
+): ServerEnv {
   const production = source.NODE_ENV === 'production';
+  const vercel = isVercel(source);
   const dataDir = optional(source.ONE_ROUTER_DATA_DIR) ?? join(homedir(), '.one-router');
-  const databaseUrl = optional(source.TURSO_DATABASE_URL) ??
-    (production ? undefined : `file:${join(dataDir, 'one-router.db').replaceAll('\\', '/')}`);
+  const externalDatabaseUrl = optional(source.TURSO_DATABASE_URL);
+  const databaseUrl = externalDatabaseUrl ?? (!production || options.localDatabase
+    ? `file:${join(dataDir, 'one-router.db').replaceAll('\\', '/')}` : undefined);
   if (!databaseUrl) throw new Error('TURSO_DATABASE_URL is required in production');
 
   const initialPassword = optional(source.INITIAL_PASSWORD);
@@ -133,20 +136,23 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
     throw new Error('ONE_ROUTER_AUTH_TOKEN must contain at least 16 characters');
   }
   const s3 = s3Config(source);
+  const uploadLimit = vercel ? 4 : Infinity;
 
   return {
     production,
     databaseUrl,
     databaseAuthToken: optional(source.TURSO_AUTH_TOKEN),
     encryptionKey: optional(source.ONE_ROUTER_ENCRYPTION_KEY),
+    allowLocalKeyCreation: options.localDatabase && !externalDatabaseUrl,
     dataDir,
     initialPassword,
     authToken,
     allowedOrigins: origins(source.ONE_ROUTER_ALLOWED_ORIGINS, production),
     sessionDays: integer(source.ONE_ROUTER_SESSION_DAYS, 30, 'ONE_ROUTER_SESSION_DAYS', 1, 365),
-    maxFileMb: decimal(source.ONE_ROUTER_MAX_FILE_MB, 10, 'ONE_ROUTER_MAX_FILE_MB', 1, 10),
+    // Leave room for multipart headers within Vercel's function payload limit.
+    maxFileMb: Math.min(decimal(source.ONE_ROUTER_MAX_FILE_MB, 10, 'ONE_ROUTER_MAX_FILE_MB', 1, 10), uploadLimit),
     maxFiles: integer(source.ONE_ROUTER_MAX_FILES, 10, 'ONE_ROUTER_MAX_FILES', 1, 100),
-    maxTotalMb: decimal(source.ONE_ROUTER_MAX_TOTAL_MB, 20, 'ONE_ROUTER_MAX_TOTAL_MB', 1, 100),
+    maxTotalMb: Math.min(decimal(source.ONE_ROUTER_MAX_TOTAL_MB, 20, 'ONE_ROUTER_MAX_TOTAL_MB', 1, 100), uploadLimit),
     port: integer(source.PORT, 4000, 'PORT', 1, 65535),
     version: optional(source.ONE_ROUTER_VERSION) ?? '0.1.0',
     providerKeys: {
@@ -156,8 +162,19 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
     },
     ollamaBaseUrl: optional(source.OLLAMA_BASE_URL),
     s3,
-    storage: storageKind(source, production, s3),
+    storage: vercel || s3 ? 's3' : production ? 'filesystem' : 'sqlite',
   };
+}
+
+export function loadVercelEnv(source: Record<string, string | undefined> = process.env): ServerEnv {
+  const databaseUrl = optional(source.TURSO_DATABASE_URL)?.replace(/^libsql:\/\//i, 'https://');
+  const url = databaseUrl && URL.canParse(databaseUrl) ? new URL(databaseUrl) : undefined;
+  if (url?.protocol !== 'https:' || url.username || url.password) {
+    throw new Error('TURSO_DATABASE_URL must be a remote TLS database URL on Vercel');
+  }
+  if (!optional(source.TURSO_AUTH_TOKEN)) throw new Error('TURSO_AUTH_TOKEN is required on Vercel');
+  if (!optional(source.ONE_ROUTER_ENCRYPTION_KEY)) throw new Error('ONE_ROUTER_ENCRYPTION_KEY is required on Vercel');
+  return loadEnv({ ...source, TURSO_DATABASE_URL: databaseUrl, NODE_ENV: 'production', VERCEL: '1' });
 }
 
 export function maxUploadBytes(env: ServerEnv): number {
