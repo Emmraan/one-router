@@ -20,7 +20,14 @@ export async function migrate(db: Database, options: { directory?: string } = {}
       try {
         const applied = await transaction.execute({ sql: 'SELECT checksum FROM migrations WHERE name = ?', args: [name] });
         if (applied.rows.length) {
-          if (applied.rows[0].checksum !== checksum) throw new Error();
+          if (applied.rows[0].checksum !== checksum) {
+            // The initial migration shipped in source checkouts before its line endings were pinned.
+            const lf = source.replaceAll('\r\n', '\n');
+            const otherLineEnding = source === lf ? lf.replaceAll('\n', '\r\n') : lf;
+            const compatible = name === '0000_initial.sql'
+              && applied.rows[0].checksum === createHash('sha256').update(otherLineEnding).digest('hex');
+            if (!compatible) throw new Error();
+          }
         } else {
           for (const statement of source.split('--> statement-breakpoint').map((sql) => sql.trim()).filter(Boolean)) {
             await transaction.execute(statement);

@@ -1,0 +1,99 @@
+name: CLI package
+
+on:
+  push:
+    branches: [main, 'phase-*', 'feat-*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cli-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=onerouter
+      - name: Pack and enforce the 5 MB limit
+        run: |
+          mkdir "$RUNNER_TEMP/cli-pack"
+          pnpm -C packages/cli pack --pack-destination "$RUNNER_TEMP/cli-pack"
+          node -e 'const fs = require("node:fs"); const bytes = fs.statSync(process.argv[1]).size; console.log(`${bytes} bytes`); if (bytes >= 5_000_000) process.exitCode = 1' "$RUNNER_TEMP"/cli-pack/*.tgz
+          cp scripts/cli-smoke.mjs "$RUNNER_TEMP/cli-pack/"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onerouter-tarball
+          path: ${{ runner.temp }}/cli-pack
+          if-no-files-found: error
+
+  installed:
+    name: Installed package (${{ matrix.os }})
+    needs: pack
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+          standalone: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: onerouter-tarball
+          path: ${{ runner.temp }}/cli-pack
+      - name: Install and check both commands from an empty project
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $artifact = Join-Path $env:RUNNER_TEMP 'cli-pack'
+          $tarball = (Get-ChildItem $artifact -Filter '*.tgz').FullName
+          $project = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP 'cli-project')
+          Set-Location $project.FullName
+          pnpm add $tarball
+          pnpm exec one-router --help
+          pnpm exec onerouter --version
+          node (Join-Path $artifact 'cli-smoke.mjs')
+
+  alpine:
+    name: Clean node:24-alpine install
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: onerouter-tarball
+          path: ${{ runner.temp }}/cli-pack
+      - name: Install and verify with only the tarball and smoke runner
+        run: |
+          docker run --rm \
+            --mount "type=bind,src=$RUNNER_TEMP/cli-pack,dst=/artifact,readonly" \
+            node:24-alpine sh -ec '
+              mkdir /tmp/cli
+              cd /tmp/cli
+              corepack pnpm@10.33.2 add /artifact/*.tgz
+              corepack pnpm@10.33.2 exec one-router --help
+              corepack pnpm@10.33.2 exec onerouter --version
+              node /artifact/cli-smoke.mjs
+            '
